@@ -11,7 +11,7 @@
 cat $PBS_NODEFILE
 
 # set home directory
-DATADIR="/mnt/storage-brno3-cerit/nfs4/home/fussyz01/Vlada"
+DATADIR="/mnt/storage-brno3-cerit/nfs4/home/fussyz01/rdobeli"
 
 #SCRATCH-related statements
 if [ ! -d "$SCRATCHDIR" ] ; then echo "Scratch directory is not created!" 1>&2; exit 1; fi
@@ -22,7 +22,7 @@ trap 'clean_scratch' TERM EXIT
 module add interproscan-5.20-59.0
 module add python27-modules-intel
 
-# nemusim kopirovat data na scratchdir, pac mam malo a mala data, ve scratchi se jen generujou tempfiles
+# nemusim kopirovat data na scratchdir, ve scratchi se jen generujou tempfiles
 cd $DATADIR
 #python translation_paja_noasterisk.py
 
