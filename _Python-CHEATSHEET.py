@@ -83,6 +83,23 @@ args = parser.parse_args()
 infile = args.infile
 num_seqs = args.num_seqs
 
+##################################
+#### Create working directory ####
+##################################
+
+if os.path.isdir("/Users/morpholino/OwnCloud/"):
+	home = "/Users/morpholino/OwnCloud/"
+elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
+	home = "/Volumes/zoliq data/OwnCloud/"
+else:
+	print("Please set a homedir")
+if args.directory == ".":
+	print("changing to default directory")
+	defdir = "Robolab/phylo/"
+	wd = home + defdir
+	os.chdir(wd)
+else:
+	os.chdir(args.directory)
 
 
 import sys
@@ -112,6 +129,12 @@ seq_dict = OrderedDict()
 #to avoid dictionary KeyErrors:
 hightaxon = high_taxon_assignment_d.get(genus, "unassigned")
 
+
+#read csv/tsv as dictionary:
+import csv
+with open('enz2annot.txt', 'r') as f:
+	reader = csv.reader(f, delimiter='\t')
+	enz2annot = {r[0]: r[1] for r in reader}
 
 
 from Bio import SeqIO,AlignIO
@@ -188,7 +211,11 @@ with open(queryfile) as f:
 	seqcount = f.read().count(">")
 print("Sequence reading progress: {:.1f}%".format(100*(c / seqcount)))
 
+############################
+####  useful functions  ####
+############################
 
+#calculate centroid of a protein
 from __future__ import division
 import numpy as np
 
@@ -197,7 +224,6 @@ array = data[:, -3:] #if the data is here
 np.mean(data[:,-3:], axis=0) #mean along the vertical axis, more or less means calculate centroid
 
 
-#useful functions
 def query_yes_no(question, default="yes"):
 	"""Ask a yes/no question via raw_input() and return their answer.
 
@@ -236,3 +262,25 @@ def query_yes_no(question, default="yes"):
 		else:
 			sys.stdout.write("Please respond with 'yes' or 'no' "
 							 "(or 'y' or 'n').\n")
+
+def delbadchars(string):
+	""" remove unneeded characters """
+	badchars = ("|+,:;()' ") #also []/@
+	n = []
+	for c in string:
+		if c in badchars:
+			c = "_"
+		n.append(c)
+	result = "".join(n)
+	return result
+
+
+def is_tool(name):
+    """Check whether `name` is on PATH and marked as executable."""
+
+    # from whichcraft import which
+    from shutil import which
+
+    return which(name) is not None
+
+

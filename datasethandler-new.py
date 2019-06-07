@@ -75,6 +75,12 @@ if os.path.isdir("RESULT") == False:
 #### Open and parse inputs ####
 ###############################
 
+#this is commented bc lineage parsing is not yet implemented
+#LINEAGEFILE = home + "progs/PYTHON/fetch_lineages.tsv"
+#with open(LINEAGEFILE, 'r') as f:
+#	reader = csv.reader(f, delimiter='\t')
+#	tax2lineage = {r[0]: r[1] for r in reader}
+
 allowed = ("fasta", "fas", "fst", "phy", "phylip")
 if args.infile == "batch":
 	infilelist = [x for x in os.listdir(".") if x.split(".")[-1] in allowed]
@@ -133,9 +139,15 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "dinPRORm": "Prorocentrum minimum", "dinPYROb": "Pyrodinium bahamense", "dinSCRIP": "Scrippsiella hangoei", 
 "dinSYMBs": "Symbiodinium sp.", "eugANGOd": "Angomonas deanei", "eugBODOs": "Bodo saltans", 
 "eugEUGgr": "Euglena gracilis", "eugEUGlo": "Euglena longa", "eugEUTc": "Eutreptiella gymnastica-like CCMP1594", 
-"eugEUTn": "Eutreptiella gymnastica NIES-381", "eugEUTgn": "Eutreptiella gymnastica NIES-381", "eugLEISm": "Leishmania major", "eugNEOBd": "Neobodo designis", 
-"eugPHYTO": "Phytomonas sp isolate em1", "eugTRYPb": "Trypanosoma brucei", "excNAEgr": "Naegleria gruberi", 
-"excPERco": "Percolomonas cosmopolitus ATCC50343", "firmBACIa": "Bacillus anthracis", 
+"eugEUTn": "Eutreptiella gymnastica NIES-381", "eugEUTgn": "Eutreptiella gymnastica NIES-381", "eugLEISm": "Leishmania major", 
+"eugNEOBd": "Neobodo designis", "eugPHYTO": "Phytomonas sp isolate em1", "eugTRYPb": "Trypanosoma brucei", 
+"excNAEgr": "Naegleria gruberi", "excPERco": "Percolomonas cosmopolitus ATCC50343", "excADUpa": "Aduncisulcus paluster Carplike_NY0171", 
+"excBLATn": "Blattamonas nauphoetae", "excCARPm": "Carpediemonas membranifera", "excDYSNb": "Dysnectes brevis", 
+"excERGcy": "Ergobibamus cyprinoides", "excHISTm": "Histomonas meleagridis", "excCHIca": "Chilomastix caulleri", 
+"excCHIcu": "Chilomastix cuspidata", "excIOTAs": "Iotanema sp.", "excKIPFb": "Kipferlia bialata", 
+"excMONOe": "Monocercomonoides exilis", "excPTRIp": "Paratrimastix pyriformis", "excSPIRs": "Spironucleus salmonicida ATCC50377",
+"excTREPs": "Trepomonas sp. PC1", "excTRIMm": "Trimastix marina", "extTTRIf": "Tritrichomonas foetus",
+"firmBACIa": "Bacillus anthracis", 
 "firmLISTm": "Listeria monocytogenes", "firmSTAPa": "Staphyllococcus aureus", "funASPEf": "Aspergillus fumigatus", 
 "funCRYPn": "Cryptococcus neoformans", "funDEBAh": "Debaryomyces hansenii cbs767", "funLACCb": "Laccaria bicolor", 
 "funNEURc": "Neurospora crassa", "funPUCCg": "Puccinia graminis", "funSCHIp": "Schizosaccharomyces pombe", 
@@ -245,7 +257,7 @@ for file in infilelist:
 	if args.aligner == "run_pasta.py":
 		command = "{0} -d protein -i safe-{1}.fasta -j {1} -o {2}".format(args.aligner, filename, outdir)
 	elif args.aligner == "mafft":
-		command = "{0} --maxiterate 1000 --localpair --thread 4 safe-{1}.fasta > safe-{1}.aln".format(args.aligner, filename)
+		command = "{0} --maxiterate 1000 --quiet --localpair --thread 4 safe-{1}.fasta > safe-{1}.aln".format(args.aligner, filename)
 	if os.path.isfile("safe-{0}.aln".format(filename)):
 		print("PHYLOHANDLER: alignment detected, previous data not cleaned?")
 	else:
@@ -255,12 +267,14 @@ for file in infilelist:
 	#copy and rename PASTA alignment to current directory and issue trimal
 	if args.aligner == "run_pasta.py":
 		os.system("cp ./{1}/{0}.marker001.safe-{0}.aln ./safe-{0}.aln".format(filename, outdir))
-		print("PHYLOHANDLER: issuing trimmer:\ntrimal -in safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename))
-		os.system("trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -automated1".format(filename)) #-gappyout / -automated1 / -gt 0.3
+		command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename) #-gappyout / -automated1 / -gt 0.3
+		print("PHYLOHANDLER: issuing trimmer:\n{}".format(command))
+		os.system(command)
 		print("PHYLOHANDLER: trimming finished")
 	elif args.aligner == "mafft":
-		print("PHYLOHANDLER: issuing trimmer:\ntrimal -in safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename))
-		os.system("trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename)) #-gappyout / -automated1 / -gt 0.3
+		command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename) #-gappyout / -automated1 / -gt 0.3
+		print("PHYLOHANDLER: issuing trimmer:\n{}".format(command))
+		os.system(command)
 		print("PHYLOHANDLER: trimming finished")
 
 	#open trimal-trimmed alignment for dumping any gaps-only sequences
@@ -303,7 +317,6 @@ for file in infilelist:
 
 	print("PHYLOHANDLER: Automated trimming done.")
 	print("Trimming produced a file with {} sequences of {} sites".format(count, length))
-	print("####################################\n")
 
 	if length < 100:
 		print("WARNING: alignment shorter than 100 chars, consider less stringent trimming.")
@@ -316,16 +329,21 @@ for file in infilelist:
 				else:
 					print("PHYLOHANDLER: tree inference finished, but treefile is corrupt. Please check")
 			else:
-				treecommand = "-m TEST -mset LG -nt AUTO -s trimfilt-{}.fasta".format(filename)
+				treecommand = "-m TEST -m LG+F+G -nt AUTO -ntmax 4 -quiet -s trimfilt-{}.fasta".format(filename) #GTR20 only for very large datasets
 				if args.bootstrap:
 					treecommand += " -bb 1000"
-				if is_tool("iqtree-omp"):
-					program = "iqtree-omp"
-				elif is_tool("iqtree"):
+				if is_tool("iqtree"):
 					program = "iqtree"
+				elif is_tool("iqtree-omp"):
+					program = "iqtree-omp"
+				else:
+					quit("PHYLOHANDLER fatal error, iqtree not found")
 				print("PHYLOHANDLER: Issuing software for tree inference:\n{} {}".format(program, treecommand))
 				os.system("{} {}".format(program, treecommand))
+		else:
+			print("PHYLOHANDLER: ERROR assigning software for tree inference!")
 
+	print("PHYLOHANDLER: tree inference finished, post-processing result files...")
 	#rename branches for presentation purposes:
 	try:
 		with open("trimfilt-{}.fasta.treefile".format(filename)) as intree, open("final-{}.fasta.treefile".format(filename), "w") as outtree:
@@ -338,14 +356,16 @@ for file in infilelist:
 		quit("PHYLOHANDLER: ERROR! Treefile not found! Quitting.")
 
 	#copy all final files to the RESULTS directory and clean up
-	os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}-iq{}.treefile".format(filename, generation))
-	os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}-iq{}.treefile".format(filename, generation))
-	os.rename("trimfilt-{}.fasta".format(filename), "RESULT/{}_ali{}.fasta".format(filename, generation))
-	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}-ali{}.phy".format(filename, generation))
+	os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}_{}-iq.treefile".format(filename, generation))
+	os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}_{}-iq.treefile".format(filename, generation))
+	os.rename("trimfilt-{}.fasta".format(filename), "RESULT/{}_{}-ali.fasta".format(filename, generation))
+	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}_{}-ali.phy".format(filename, generation))
 	os.rename("{}".format(file), "RESULT/{}".format(file))
-	os.rename("rename-{}.txt".format(filename), "RESULT/{}-renamekey{}.tsv".format(filename, generation))
+	os.rename("rename-{}.txt".format(filename), "RESULT/{}_{}-renamekey.tsv".format(filename, generation))
 	os.system("mv safe* temp")
 	os.system("mv trim* temp")
+	print("####################################\n")
+
 
 print("PHYLOHANDLER: All requested analyses finished. Hooray!")
 if errors:

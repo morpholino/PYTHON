@@ -1,7 +1,7 @@
 #make a pallette of colours for a set of locations
 from ete3 import Tree, TreeStyle, TextFace, NodeStyle
 import csv
-
+import os
 
 #################
 ### FUNCTIONS ###
@@ -19,24 +19,61 @@ def find_supported(node, support):
 def tag_replace(string):
     tag = string.split("_")[0]
     if tag in taxarepl9:
+        genus = taxarepl9.get(tag, "").split(" ")[0]
         string = string.replace(tag, taxarepl9[tag])
+    else:
+        genus = tag
+    if tag in fetch_lineages:
+        string = "{}@{}".format(string, fetch_lineages[tag])
+    elif genus in fetch_lineages:
+        string = "{}@{}".format(string, fetch_lineages[genus])
+    else:
+        print("No lineage available for >{}".format(tag))
+
     return string
     
 #################
 ### DATA READ ###
 #################
-filename = "UROS_raxml"
+
+filename = "HydA_2-iq1"
+
+if os.path.isdir("/Users/morpholino/OwnCloud/"):
+    home = "/Users/morpholino/OwnCloud/"
+elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
+    home = "/Volumes/zoliq data/OwnCloud/"
+else:
+    print("Please set a homedir")
+if True:
+    print("setting default directory")
+    defdir = "progs/PYTHON/"
+    wd = home + defdir
+
+#load additional data
+print("loading data files")  
+LocDataFile = csv.reader(open("4pred-preds.txt"), delimiter="\t", skipinitialspace=True)
+
+taxareplfile = csv.reader(open("taxarepl9.tsv"), delimiter="\t", skipinitialspace=False)
+taxarepl9 = {row[0]:row[1] for row in taxareplfile}
+
+lineagefile = csv.reader(open(wd + "/fetch_lineages.tsv"), delimiter="\t", skipinitialspace=False)
+fetch_lineages = {row[0]:row[1] for row in lineagefile}
+
 #################
+print("loading tree file")  
 t = Tree(filename + ".treefile", format=0) #format flexible with support values
 
 #set the ancestors here
 ancestors_d = {"Clade1": ["cyanANABv_WP_011317903.1_plastoquinolTOX", 
                           "grnPRASc_MMETSP0941_Gene.14464-Transcript_5625_Chlorophyta_Prasinococcales"],
                "Clade2": ["crypGONIp_MMETSP0107_Gene.30083-Transcript_20766_Cryptophyta_Cryptomonadales",
-                          "Phenylobacterium_sp._RIFCSPHIGHO2_01_FULL_69_31_OHB27812.1"],
-               "UROS_raxml": ["Pyrobaculum_islandicum_WP_011761876",
-                          "Thermoplasma_volcanium_WP_010916891"]
+                          "Phenylobacterium_sp._RIFCSPHIGHO2_01_FULL_69_31_OHB27812.1"]
               }
+with open('ancestors.txt', 'r') as f:
+    reader = csv.reader(f, delimiter='\t')
+    ancestors_d.update({r[0]: [r[1], r[2]] for r in reader})
+#print(ancestors_d)
+
 try:
     ancestor = t.get_common_ancestor(ancestors_d[filename])
     t.set_outgroup(ancestor)
@@ -55,13 +92,6 @@ else:
     minsupport = 85
 find_supported(t, support=minsupport) #find non-terminal nodes with high support
 
-#load additional data    
-LocDataFile = csv.reader(open("4pred-preds.txt"), delimiter="\t", skipinitialspace=True)
-
-taxareplfile = csv.reader(open("taxarepl9.tsv"), delimiter="\t", skipinitialspace=False)
-taxarepl9 = {}
-for row in taxareplfile:
-    taxarepl9[row[0]] = row[1]
     
 ##################
 ###    MAIN    ###
@@ -87,7 +117,7 @@ colors = {"MT": "dodgerblue", "PT": "mediumseagreen", "dual": "darkviolet",
 #colors = {}
 #for i, X in enumerate(localization):
 #    colors[X] = cmap[i] #hopefully this is still recognized as a color
-print(colors)
+#print(colors)
 
 
 #set different graphic styles:
@@ -148,4 +178,4 @@ for node in t.traverse():
 
 #ts.legend.add_face(fig, column=0) #does not work
 #t.show(tree_style=ts)
-t.render(filename + "_c.png", w=400, units="mm", tree_style=ts)
+t.render(filename + "_c.pdf", w=400, units="mm", tree_style=ts)

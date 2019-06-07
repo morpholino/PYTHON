@@ -1,6 +1,9 @@
 import os
 import csv
+import urllib
 from Bio import Entrez,SeqIO
+
+
 Entrez.email = "zoltan.fussy@google.com" 
 
 #this script was designed to extract accessions from a table... 
@@ -40,7 +43,7 @@ os.chdir(wd)
 ############
 
 #pick what sort of files you need to parse:
-filetype =  ["fasta", "renamefile", "tsv", "errorfile-missing"][2]
+filetype =  ["fasta", "renamefile", "tsv", "errorfile-missing", "list"][2]
 
 badchars = ("|@+,:;()'")
 allowed = ("fasta", "fas", "fst", "phy", "phylip")
@@ -70,12 +73,13 @@ if filetype == "renamefile":
 
 elif filetype == "fasta":
 	files = [x for x in os.listdir(".") if x.endswith("fasta")]
+	files = [x for x in files if not x.startswith("new_")]
 	#test purposes only: files = ["STT3_pfam02516.fasta"]
 	for file in files:
 		newfile = "new_" + file
 		print("Processing file " + file)
 		f = SeqIO.parse(file, "fasta")
-		with open(newfile, "w") as out:
+		with open(newfile, "w") as out, open("errors_fetch.log", "w") as errorlog:
 			for l in f:
 				if l.name.startswith("gi|"):
 					gid = l.name.split("|")[1]
@@ -90,11 +94,24 @@ elif filetype == "fasta":
 					#print(annot)
 					out.write(">{} {}\n{}\n".format(accession, annot, l.seq))
 					#record['TSeq_taxid'] and record['TSeq_orgname'] also possible
+				elif "|" in l.description:
+					codepos = l.description.find('|')
+					code = l.description[:codepos]
+					print(code)
+					res = u.retrieve(code, frmt='fasta', database='uniprot')
+					reshead = res.split("\n")[0]
+					try:
+						out.write("{}\n{}\n".format(reshead, l.seq)) #extract seq header
+						#out.write(res) #write fasta as is
+					except TypeError:
+						print(res)
+						errorlog.write("{}\t{}\n".format(code, "could not be retrieved"))
+						out.write(">{}\n{}\n".format(l.description, l.seq))
 				else:
 					description = "".join(x for x in l.description if x not in badchars)
 					out.write(">{}\n{}\n".format(description, l.seq))
 
-#this part is to retrieve accessions written in a table
+#this part is to retrieve accessions written in a table where the firs columns is the taxon and second is the accession
 elif filetype == "tsv":
 	files = [x for x in os.listdir(".") if x.endswith("tsv")]
 	#test purposes only: files = ["fetchlist.tsv"]
@@ -184,8 +201,42 @@ elif filetype == "errorfile-missing":
 			
 			for left in missingdict:
 				error.write("{}\t{}\n".format(left, missingdict[left]))
+
+#this part is for a list of accession numbers
+elif filetype == "list":
+	files = [x for x in os.listdir(".") if x.endswith(".txt")]
+	files = [x for x in files if not x.endswith("-missing.txt")]
+	#test purposes only: files = ["fetchlist.txt"]
+	for file in files:
+		missing = file.replace(".txt", "") + "-missing.txt"
+		newfile = file.replace(".txt", "") + "-get.fasta"
+		print("Processing file " + file)
+		f = open(file)
+		with open(newfile, "w") as out, open(missing, "w") as error:
+			for l in f:
+				gid = l.strip()
+				print(gid)
+				try:
+					handle = Entrez.efetch(db="protein", id=gid, rettype="fasta", retmode="XML")
+					record = Entrez.read(handle)
+				except urllib.error.HTTPError:
+					error.write("{}\n".format(gid))
+					print("skipped!")
+					continue
+				try:
+					accession = record[0]['TSeq_accver']
+					annot = "".join([x for x in record[0]['TSeq_defline'] if x not in badchars])
+					sequence = record[0]['TSeq_sequence']
+					out.write(">{}\t{}\n{}\n".format(accession, annot, sequence))
+				except KeyError:
+					error.write("{}\n".format(gid))
+					#accession = l.split("\t")[0].replace("gi_{}_".format(gid), "")
+				#print(record)
+				#print(annot)
+
+
 """
-Swissprot works in a similar way:
+#Swissprot works in a similar way:
 >>> from Bio import ExPASy,SwissProt
 
 >>> handle = ExPASy.get_sprot_raw(hitid)
@@ -197,4 +248,11 @@ Swissprot works in a similar way:
 'molecule_type', 'organelle', 'organism', 'organism_classification',
 'references', 'seqinfo', 'sequence', 'sequence_length',
 'sequence_update', 'taxonomy_id']
+
+#Uniprot uses a different library:
+from bioservices import UniProt
+u = UniProt(verbose=False)
+res = u.retrieve("V4LCC8", frmt='xml', database='uniprot') #or fasta/gff frmt
+res = u.retrieve("V4LCC8", frmt='txt', database='uniprot')
+print(res)
 """

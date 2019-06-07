@@ -2,10 +2,13 @@ import os
 import re
 
 #this script parses Interproscan gff3 to table to easily link sequences with their annotations
-homedir = "/Users/zoliq/ownCloud/"
-#homedir = "/Volumes/zoliq data/ownCloud"
+if os.path.isdir("/Users/morpholino/OwnCloud/"):
+	homedir = "/Users/morpholino/OwnCloud/"
+elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
+	homedir = "/Volumes/zoliq data/OwnCloud/"
+else:
+	print("Please set a homedir")
 wd = homedir + "Jankoviny/Tick_transcriptome/"
-
 
 os.chdir(wd)
 
@@ -53,7 +56,18 @@ for f in files:
 			for hit in re.findall(ANNOTpattern, i):
 				annot = hit.replace('signature_desc=', '').split(";")[0]
 				signature_desc.add(annot)
-			curdict = {"frame": frame, "GOs": GOs, "IPSid": IPSid, "family IDs": familyIDs, "signature_desc": signature_desc}
+			#find the range covered by annotations:
+			lower, upper = [], [] 
+			for line in i.split("\n"):
+				columns = line.split("\t")
+				#print(columns)
+				if len(columns) == 1:
+					pass
+				elif columns[2] != "polypeptide": #this covers the whole sequence
+					lower.append(columns[3])
+					upper.append(columns[4])
+			seqrange = "{}-{}".format(min(lower), max(upper))
+			curdict = {"frame": frame, "range": seqrange,"GOs": GOs, "IPSid": IPSid, "family IDs": familyIDs, "signature_desc": signature_desc}
 			if seqid not in seq_table:
 				seq_table[seqid] = curdict
 			else:
@@ -85,9 +99,10 @@ with open("foundGOs.txt", "w") as result:
 
 with open("IPStable.txt", "w") as result:
 	print("Writing IPS table to file...")
-	result.write("SeqID\tframe\tGOterms\tIPS ID\tFamily ID\tsignature description\n")
+	result.write("SeqID\tframe\tRANGE\tGOterms\tIPS ID\tFamily ID\tsignature description\n")
 	for k in sorted(seq_table.keys()):
 		printframe = seq_table[k]["frame"]
+		printrange = seq_table[k]["range"]
 		printgo = seq_table[k]["GOs"]
 		if len(printgo) == 0:
 			printgo = ""
@@ -108,6 +123,6 @@ with open("IPStable.txt", "w") as result:
 			printsignature = ""
 		else:
 			printsignature = " ".join(printsignature)
-		result.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(k, printframe, printgo, printips, printfamily, printsignature))
+		result.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(k, printframe, printrange, printgo, printips, printfamily, printsignature))
 
 print("parsing finished")
