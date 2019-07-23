@@ -15,7 +15,7 @@ def create_wordcloud(text):
 
     wc = WordCloud(background_color="white", 
         mask=mask, max_words = 200, stopwords=stopwords, max_font_size=50,
-        prefer_horizontal=0.6).generate(text)
+        prefer_horizontal=0.7).generate(text)
 
     image_colors = ImageColorGenerator(mask) #may give an error, but is handy
     plt.figure(figsize=[8,6])
@@ -30,8 +30,9 @@ def create_wordcloud(text):
 
 text = ""
 """
+#refresh sometimes...
 MAX_COUNT = 50
-TERM = 'Věchtová Pavlína'
+TERM = 'Füssy Zoltán'
 
 Entrez.email = 'zoltan.fussy@gmail.com' # put your mail here
 h = Entrez.esearch(db='pubmed', retmax=MAX_COUNT, term=TERM)
@@ -45,10 +46,12 @@ for paper in records:
     print(paper['TI'])
     try:
         if paper['AB']: #'TI' for titles, 'AB' for abstracts
-            text = text + ' ' + paper['AB']
+            text = text + '\n' + paper['AB']
     except:
         pass
 print("Imported from NCBI: {} words.".format(len(text.split())))
+with open("abstracts_NCBI_automatic.txt", "w") as result:
+    result.write(text)
 """
 NCBIabstracts = open("abstracts_NCBI.txt")
 for l in NCBIabstracts:

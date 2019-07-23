@@ -17,7 +17,10 @@ def find_supported(node, support):
     return matches
 
 def tag_replace(string):
+    #print("Lineage lookup began, please use the following list of unrecognized genera to update your fetch_lineages.tsv")
     tag = string.split("_")[0]
+    if tag in {"Candidatus", "uncultured", "mt", "pt", "cyto"}:
+        tag = string.split("_")[1]
     if tag in taxarepl9:
         genus = taxarepl9.get(tag, "").split(" ")[0]
         string = string.replace(tag, taxarepl9[tag])
@@ -28,7 +31,8 @@ def tag_replace(string):
     elif genus in fetch_lineages:
         string = "{}@{}".format(string, fetch_lineages[genus])
     else:
-        print("No lineage available for >{}".format(tag))
+        print("No lineage available for: {}".format(tag))
+        all_lineages_found = False
 
     return string
     
@@ -36,7 +40,7 @@ def tag_replace(string):
 ### DATA READ ###
 #################
 
-filename = "HydA_2-iq1"
+filename = "NuTF2"
 
 if os.path.isdir("/Users/morpholino/OwnCloud/"):
     home = "/Users/morpholino/OwnCloud/"
@@ -46,19 +50,21 @@ else:
     print("Please set a homedir")
 if True:
     print("setting default directory")
-    defdir = "progs/PYTHON/"
+    defdir = "progs/PYTHON/ETEtree/"
+    coredata = home + "progs/PYTHON/"
     wd = home + defdir
 
 #load additional data
 print("loading data files")  
-LocDataFile = csv.reader(open("4pred-preds.txt"), delimiter="\t", skipinitialspace=True)
+LocDataFile = csv.reader(open(wd + "4pred-preds.txt"), delimiter="\t", skipinitialspace=True)
 
-taxareplfile = csv.reader(open("taxarepl9.tsv"), delimiter="\t", skipinitialspace=False)
+taxareplfile = csv.reader(open(coredata + "taxarepl9.tsv"), delimiter="\t", skipinitialspace=False)
 taxarepl9 = {row[0]:row[1] for row in taxareplfile}
 
-lineagefile = csv.reader(open(wd + "/fetch_lineages.tsv"), delimiter="\t", skipinitialspace=False)
+lineagefile = csv.reader(open(coredata + "fetch_lineages.tsv"), delimiter="\t", skipinitialspace=False)
 fetch_lineages = {row[0]:row[1] for row in lineagefile}
 
+all_lineages_found = True
 #################
 print("loading tree file")  
 t = Tree(filename + ".treefile", format=0) #format flexible with support values
@@ -179,3 +185,8 @@ for node in t.traverse():
 #ts.legend.add_face(fig, column=0) #does not work
 #t.show(tree_style=ts)
 t.render(filename + "_c.pdf", w=400, units="mm", tree_style=ts)
+
+if all_lineages_found == False:
+    print("run fetch_entrez_lineage_tree.py to find missing lineages")
+
+print("Analysis finished")

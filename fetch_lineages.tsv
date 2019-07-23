@@ -533,7 +533,6 @@ Trypanosoma	Euglenozoa,Kinetoplastida
 Tuber	Fungi,Ascomycota
 Tumebacillus	Firmicutes
 unclassified	unidentified
-uncultured	Acidobacteria
 Vannella	Amoebozoa,Discosea
 Vaucheria	Stramenopiles,PX clade
 Verminephrobacter	Betaproteobacteria
@@ -551,3 +550,41 @@ Zancudomyces	Fungi,Zoopagomycota
 Zavarzinella	Planctomycetes
 Zea	Viridiplantae,Streptophyta
 R.dobelli	Excavata,Fornicata,Retortamonadidae
+Kryptonium	FCB group
+Micropelagos	Alphaproteobacteria
+Microthrix	Actinobacteria
+Paracaedibacter	Alphaproteobacteria
+Pelagibacter	Alphaproteobacteria
+Rokubacteria	unclassified
+Thioglobus	Gammaproteobacteria
+Methylophilales	Betaproteobacteria
+Thiohalocapsa	Gammaproteobacteria
+Hepatobacter	Alphaproteobacteria
+Kryptobacter	FCB group
+Phaeomarinobacter	Alphaproteobacteria
+Arthroderma	Fungi,Ascomycota
+Brevundimonas	Alphaproteobacteria
+Caulobacter	Alphaproteobacteria
+Chitinophaga	Bacteroidetes
+Conexibacter	Actinobacteria
+Coprococcus	Firmicutes
+Endocarpon	Fungi,Ascomycota
+Gordonia	Actinobacteria
+Haloterrigena	Archaea,Euryarchaeota
+Jannaschia	Alphaproteobacteria
+Lactobacillus	Firmicutes
+Mannheimia	Gammaproteobacteria
+Marinomonas	Gammaproteobacteria
+Meyerozyma	Fungi,Ascomycota
+Mycobacteroides	Actinobacteria
+Nocardia	Actinobacteria
+Nocardioides	Actinobacteria
+Pantoea	Gammaproteobacteria
+Phaeosphaeria	Fungi,Ascomycota
+Sphingobium	Alphaproteobacteria
+Spirosoma	Bacteroidetes
+Stackebrandtia	Actinobacteria
+Talaromyces	Fungi,Ascomycota
+Thermobifida	Actinobacteria
+Thermomonospora	Actinobacteria
+Zygosaccharomyces	Fungi,Ascomycota

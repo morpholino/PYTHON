@@ -64,8 +64,8 @@ for f in files:
 				if len(columns) == 1:
 					pass
 				elif columns[2] != "polypeptide": #this covers the whole sequence
-					lower.append(columns[3])
-					upper.append(columns[4])
+					lower.append(int(columns[3]))
+					upper.append(int(columns[4]))
 			seqrange = "{}-{}".format(min(lower), max(upper))
 			curdict = {"frame": frame, "range": seqrange,"GOs": GOs, "IPSid": IPSid, "family IDs": familyIDs, "signature_desc": signature_desc}
 			if seqid not in seq_table:

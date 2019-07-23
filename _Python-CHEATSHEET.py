@@ -284,3 +284,28 @@ def is_tool(name):
     return which(name) is not None
 
 
+def overlaps(moduleA, moduleB):
+	startA = moduleA[0]
+	endA = moduleA[1]
+	startB = moduleB[0]
+	endB = moduleB[1]
+	if startA <= startB <= endA:
+		if startA <= endB <= endA:
+			overlap = "embed"
+		else:
+			overlap = "overlap"
+	elif startA <= endB <= endA:
+		overlap = "overlap"
+	elif startB <= startA <= endB and startB <= startB <= endB:
+		overlap = "embed"
+	else:
+		overlap = "none"
+	return overlap
+
+
+def decor(string):
+	def wrap():
+		print("===============")
+		print(string)
+		print("===============")
+	return wrap

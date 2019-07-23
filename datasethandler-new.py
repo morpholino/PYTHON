@@ -32,6 +32,12 @@ def is_tool(name):
 
     return which(name) is not None
 
+def find_generation(filename):
+	versions = [x for x in os.listdir("RESULT") if x.startswith(filename)]
+	versions = [x for x in versions if x.endswith("treefile")]
+	generation = len(versions) + 1
+	return generation
+
 #########################
 #### Read parameters ####
 #########################
@@ -62,10 +68,13 @@ if args.directory == ".":
 	os.chdir(wd)
 else:
 	os.chdir(args.directory)
-for generation in range(1,15):
-	if os.path.isdir("TREE" + str(generation)) == False:
-		outdir = "TREE" + str(generation)
-		break
+
+#this generation counter must be improved or skipped:
+#for generation in range(1,15):
+#	if os.path.isdir("TREE" + str(generation)) == False:
+#		outdir = "TREE" + str(generation)
+#		break
+outdir = "pasta"
 if os.path.isdir("temp") == False:
 	os.mkdir("./temp")
 if os.path.isdir("RESULT") == False:
@@ -92,9 +101,10 @@ else:
 	quit("file type not recognized - is it fasta/fas/fst or phy/phylip?")
 
 print("PHYLOHANDLER: Files to be analyzed: " + ", ".join(infilelist))
-print("PHYLOHANDLER: Data output to dir: " + outdir)
-print("PHYLOHANDLER: (some data in ./temp)")
+#outdir only needed for pasta
+#print("PHYLOHANDLER: Data output to dir: " + outdir)
 print("PHYLOHANDLER: Final relevant data will be in ./RESULTS")
+print("PHYLOHANDLER: (some data in ./temp)")
 
 #zoltan's homemade database renaming dictionary
 taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium tuberculosis", 
@@ -106,6 +116,7 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "amoSEXAN": "Sexangularia sp. CB-2014", "amoSTYGA": "Stygamoeba regulata", "amoVANEL": "Vannella", 
 "apiBABEb": "Babesia bovis", "apiCHROv": "Chromera velia", "apiCRYPm": "Cryptosporidium muris", 
 "apiEIMEt": "Eimeria tenella", "apiGREGn": "Gregarina niphandrodes", "apiNEOSc": "Neospora caninum", 
+"apiPLASb": "Plasmodium berghei",
 "apiTHEIe": "Theileria equi", "apiTOXOg": "Toxoplasma gondii", "apiVITbr": "Vitrella brassicaformis", 
 "apiVORp": "Voromonas pontica", "archPICRt": "Picrophilus torridus", "archPYROa": "Pyrobaculum aerophilum", 
 "archSULFt": "Sulfolobus tokodaii", "archTHERv": "Thermoplasma volcanium", "bcidBACTf": "Bacteroides fragilis", 
@@ -131,6 +142,7 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "dinALEXt": "Alexandrium tamarense", "dinAMPHc": "Amphidinium carterae", "dinCERAf": "Ceratium fusus PA161109", 
 "dinCRYPc": "Crypthecodinium cohnii WH Provasly-Seligo", "dinCRYPZ": "Crypthecodinium cohnii", 
 "dinDURIb": "Durinskia baltica CSIRO CS-38", "dinDURIZ": "Durinskia baltica", "dinDINac": "Dinophysis acuminata",
+"dinDYNac": "Dinophysis acuminata",
 "dinGLENf": "Glenodinium foliaceum CCAP 1116-3", "dinGYMNc": "Gymnodinium catenatum", 
 "dinHETro": "Heterocapsa rotundata SCCAP K-0483", "dinHETtr": "Heterocapsa triquestra CCMP 448", 
 "dinKARb": "Karenia brevis SP1", "dinKARL": "Karlodinium veneficum", "dinKARmi": "Karlodinium micrum CCMP2283", 
@@ -206,10 +218,12 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 #remove bad datasets and bad chars from names
 taxonpattern = r'\[(.+)\]'
 errors = False
+failedfiles = []
 for file in infilelist:
-	print("PHYLOHANDLER: Processing file: " + file)
 	extension = file.split(".")[-1]
 	filename = file.replace("." + extension, "")
+	generation = find_generation(filename)
+	print("PHYLOHANDLER: Processing file: {}, version {}".format(file, generation))
 	if extension in ("fasta", "fas", "fst"):
 		indataset = SeqIO.parse(file, 'fasta')
 	elif extension in ("phy", "phylip"):
@@ -259,26 +273,32 @@ for file in infilelist:
 	elif args.aligner == "mafft":
 		command = "{0} --maxiterate 1000 --quiet --localpair --thread 4 safe-{1}.fasta > safe-{1}.aln".format(args.aligner, filename)
 	if os.path.isfile("safe-{0}.aln".format(filename)):
-		print("PHYLOHANDLER: alignment detected, previous data not cleaned?")
+		print("PHYLOHANDLER: Alignment detected, previous data not cleaned?")
 	else:
-		print("PHYLOHANDLER: issuing aligner\n" + command)
+		print("PHYLOHANDLER: Issuing aligner\n" + command)
 		os.system(command)
 
 	#copy and rename PASTA alignment to current directory and issue trimal
 	if args.aligner == "run_pasta.py":
 		os.system("cp ./{1}/{0}.marker001.safe-{0}.aln ./safe-{0}.aln".format(filename, outdir))
 		command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename) #-gappyout / -automated1 / -gt 0.3
-		print("PHYLOHANDLER: issuing trimmer:\n{}".format(command))
+		print("PHYLOHANDLER: Issuing trimmer:\n{}".format(command))
 		os.system(command)
-		print("PHYLOHANDLER: trimming finished")
 	elif args.aligner == "mafft":
 		command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename) #-gappyout / -automated1 / -gt 0.3
-		print("PHYLOHANDLER: issuing trimmer:\n{}".format(command))
+		print("PHYLOHANDLER: Issuing trimmer:\n{}".format(command))
 		os.system(command)
-		print("PHYLOHANDLER: trimming finished")
 
 	#open trimal-trimmed alignment for dumping any gaps-only sequences
-	trimalignmentfile = AlignIO.read("trim-{0}.aln".format(filename), "fasta")
+	try:
+		trimalignmentfile = AlignIO.read("trim-{0}.aln".format(filename), "fasta")
+		print("PHYLOHANDLER: Trimming finished, loading alignment")
+	except FileNotFoundError:
+		errors = True
+		error.write("file:{}\tcould not find trimmed alignment\n".format(file))
+		failedfiles.append(file)
+		quit("PHYLOHANDLER: ERROR! Alignment not found! Quitting.")
+
 	outfile1, outfile2 = "trimfilt-{0}.fasta".format(filename), "trimfilt-{0}.phy".format(filename)
 	#filter out any sequences that are gaps-only after trimming
 	filtalignmentfile = [record for record in trimalignmentfile if record.seq.count("-") != len(record.seq) and len(record.seq) != 0]
@@ -306,7 +326,10 @@ for file in infilelist:
 	else:
 		print("#####\nWARNING: File {} has zero size\n#####".format(outfile1))
 
-	print("PHYLOHANDLER: Now to writing renaming_file...")
+	print("PHYLOHANDLER: Post-trimming performed.")
+	print("Trimming produced a file with {} sequences of {} sites".format(count, length))
+
+	print("PHYLOHANDLER: Now to writing rename file...")
 	with open("rename-{}.txt".format(filename), "w") as renaming:
 		for key,value in seq_d.items():
 			try:
@@ -315,21 +338,19 @@ for file in infilelist:
 				percentalign = value[1]
 			renaming.write("{0}\t{1}\t{2}\n".format(value[1], value[0], percentalign)) #value[1][:50] for shorter names
 
-	print("PHYLOHANDLER: Automated trimming done.")
-	print("Trimming produced a file with {} sequences of {} sites".format(count, length))
-
 	if length < 100:
-		print("WARNING: alignment shorter than 100 chars, consider less stringent trimming.")
+		print("WARNING: Alignment shorter than 100 chars, consider less stringent trimming.")
 
 	if args.treemaker != "none":
 		if args.treemaker in ["iqtree-omp", "iqtree"]:
 			if os.path.isfile("trimfilt-{}.fasta.treefile".format(filename)):
 				if os.stat("trimfilt-{}.fasta.treefile".format(filename)).st_size > 0: #check for file size
-					print("PHYLOHANDLER: tree inference finished, previous data not cleaned?")
+					print("PHYLOHANDLER: Tree inference finished, previous data not cleaned?")
 				else:
-					print("PHYLOHANDLER: tree inference finished, but treefile is corrupt. Please check")
+					print("PHYLOHANDLER: Tree inference finished, but treefile is corrupt. Please check")
 			else:
-				treecommand = "-m TEST -m LG+F+G -nt AUTO -ntmax 4 -quiet -s trimfilt-{}.fasta".format(filename) #GTR20 only for very large datasets
+				guidetreecommand = "-m LG+F+G -nt AUTO -ntmax 8 -quiet -s trimfilt-{0}.fasta -pre guide-{0}".format(filename) #GTR20 only for very large datasets
+				treecommand = "-m LG+C20+F+G -nt AUTO -ntmax 8 -quiet -s trimfilt-{0}.fasta -ft guide-{0}.treefile".format(filename) #GTR20 only for very large datasets
 				if args.bootstrap:
 					treecommand += " -bb 1000"
 				if is_tool("iqtree"):
@@ -337,13 +358,20 @@ for file in infilelist:
 				elif is_tool("iqtree-omp"):
 					program = "iqtree-omp"
 				else:
-					quit("PHYLOHANDLER fatal error, iqtree not found")
-				print("PHYLOHANDLER: Issuing software for tree inference:\n{} {}".format(program, treecommand))
+					quit("PHYLOHANDLER: FATAL ERROR! iqtree not found")
+				if not os.path.isfile("guide-{0}.treefile".format(filename)):
+					print("PHYLOHANDLER: Issuing software for guide tree inference:\n{} {}".format(program, guidetreecommand))
+					os.system("{} {}".format(program, guidetreecommand))
+				else:
+					print("PHYLOHANDLER: Guide tree found, continuing...")
+				print("PHYLOHANDLER: Issuing software for final tree inference:\n{} {}".format(program, treecommand))
 				os.system("{} {}".format(program, treecommand))
 		else:
+			errors = True
+			error.write("file:{}\tcould not find assign software for tree inference\n".format(file))
 			print("PHYLOHANDLER: ERROR assigning software for tree inference!")
 
-	print("PHYLOHANDLER: tree inference finished, post-processing result files...")
+	print("PHYLOHANDLER: Tree inference finished, post-processing result files...")
 	#rename branches for presentation purposes:
 	try:
 		with open("trimfilt-{}.fasta.treefile".format(filename)) as intree, open("final-{}.fasta.treefile".format(filename), "w") as outtree:
@@ -353,6 +381,9 @@ for file in infilelist:
 					tree = tree.replace(key, taxarepl9[key])
 			outtree.write(tree)
 	except FileNotFoundError:
+		errors = True
+		error.write("file:{}\tcould not find treefile\n".format(file))
+		failedfiles.append(file)
 		quit("PHYLOHANDLER: ERROR! Treefile not found! Quitting.")
 
 	#copy all final files to the RESULTS directory and clean up
@@ -360,13 +391,17 @@ for file in infilelist:
 	os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}_{}-iq.treefile".format(filename, generation))
 	os.rename("trimfilt-{}.fasta".format(filename), "RESULT/{}_{}-ali.fasta".format(filename, generation))
 	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}_{}-ali.phy".format(filename, generation))
-	os.rename("{}".format(file), "RESULT/{}".format(file))
+	os.rename("{}".format(file), "RESULT/{}_{}.{}".format(filename, generation, extension))
 	os.rename("rename-{}.txt".format(filename), "RESULT/{}_{}-renamekey.tsv".format(filename, generation))
 	os.system("mv safe* temp")
 	os.system("mv trim* temp")
+	os.system("mv guide* temp")
 	print("####################################\n")
 
+if failedfiles == []:
+	print("PHYLOHANDLER: All requested analyses finished. Hooray!")
+else:
+	print("PHYLOHANDLER: Requested analyses failed for: {}".format((", ").join(failedfiles)))
 
-print("PHYLOHANDLER: All requested analyses finished. Hooray!")
 if errors:
-	print("PHYLOHANDLER: Errors occurred during sequence read, please refer to error.log")
+	print("PHYLOHANDLER: Errors occurred during processing, please refer to error.log")

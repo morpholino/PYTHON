@@ -30,7 +30,7 @@ else:
 	print("Please set a homedir")
 if args.directory == ".":
 	print("changing to default directory")
-	defdir = "Robolab/phylo/"
+	defdir = "Jankoviny/houba/trees/"
 	wd = home + defdir
 	os.chdir(wd)
 else:
