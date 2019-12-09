@@ -5,6 +5,7 @@ ncbi = NCBITaxa()
 with open("fetch_entrez_missing.txt") as f:
 	missing = f.read().split("\n")
 name2taxid = ncbi.get_name_translator(missing)
+print(name2taxid)
 #TESTING PURPOSES ONLY:
 #missing = ['Homo', 'Aspergillus', 'Haloquadratum']
 #taxid2name = ncbi.get_taxid_translator([9606, 9443])

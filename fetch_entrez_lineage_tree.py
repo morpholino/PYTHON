@@ -30,7 +30,7 @@ else:
 	print("Please set a homedir")
 if args.directory == ".":
 	print("changing to default directory")
-	defdir = "Jankoviny/houba/trees/"
+	defdir = "DolezalLab/SecY/"
 	wd = home + defdir
 	os.chdir(wd)
 else:
@@ -83,7 +83,7 @@ name2taxid = ncbi.get_name_translator(missing)
 #rankofnode = ncbi.get_rank([9606, 9443])
 
 for genus in name2taxid:
-	#retriev at least one species:
+	#retrieve at least one species:
 	descendants = ncbi.get_descendant_taxa(genus)
 	lineage = ncbi.get_lineage(descendants[0])[2:7]
 	names = ncbi.get_taxid_translator(lineage)

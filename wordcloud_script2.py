@@ -57,9 +57,9 @@ NCBIabstracts = open("abstracts_NCBI.txt")
 for l in NCBIabstracts:
     text = text + ' ' + l
 print("Imported from NCBI: {} words.".format(len(text.split())))
+
 #i had problems with non-ascii characters again
 import io
-
 notincluded = io.open("abstracts.txt", "r", encoding="utf-8")
 for l in notincluded:
     #print(l[:10])

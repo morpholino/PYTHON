@@ -18,8 +18,12 @@ def find_supported(node, support):
 
 def tag_replace(string):
     #print("Lineage lookup began, please use the following list of unrecognized genera to update your fetch_lineages.tsv")
+    if "-" in string:
+        string = string.replace("-", "_")
+    if " " in string:
+        string = string.replace(" ", "_")
     tag = string.split("_")[0]
-    if tag in {"Candidatus", "uncultured", "mt", "pt", "cyto"}:
+    if tag in {"Candidatus", "uncultured", "mt", "pt", "cyto", "SEED", "SEED1", "SEED2", "WEIRD", "candidate"}:
         tag = string.split("_")[1]
     if tag in taxarepl9:
         genus = taxarepl9.get(tag, "").split(" ")[0]
@@ -40,7 +44,7 @@ def tag_replace(string):
 ### DATA READ ###
 #################
 
-filename = "NuTF2"
+filename = "Alb3_v82-iq"
 
 if os.path.isdir("/Users/morpholino/OwnCloud/"):
     home = "/Users/morpholino/OwnCloud/"
@@ -69,15 +73,20 @@ all_lineages_found = True
 print("loading tree file")  
 t = Tree(filename + ".treefile", format=0) #format flexible with support values
 
-#set the ancestors here
+#set the ancestors here...
 ancestors_d = {"Clade1": ["cyanANABv_WP_011317903.1_plastoquinolTOX", 
                           "grnPRASc_MMETSP0941_Gene.14464-Transcript_5625_Chlorophyta_Prasinococcales"],
                "Clade2": ["crypGONIp_MMETSP0107_Gene.30083-Transcript_20766_Cryptophyta_Cryptomonadales",
                           "Phenylobacterium_sp._RIFCSPHIGHO2_01_FULL_69_31_OHB27812.1"]
               }
-with open('ancestors.txt', 'r') as f:
+#or make them available in a tsv:
+with open('_ancestors.tsv', 'r') as f:
     reader = csv.reader(f, delimiter='\t')
-    ancestors_d.update({r[0]: [r[1], r[2]] for r in reader})
+    try:
+        ancestors_d.update({r[0]: [r[1], r[2]] for r in reader})
+    except IndexError:
+        #incomplete line
+        pass
 #print(ancestors_d)
 
 try:

@@ -19,12 +19,12 @@ fi
 #bash string comparison:
 "$foo" == "$bar"
 
-
-
 for word in $paragraph
 do
   echo $word
 done
+#single line possible:
+for i in *.fasta; do j="${i%.*}" && whatever -with $i $j.out; done
 
 #while and until loops are similar in function
 while [ $index -lt 5 ]

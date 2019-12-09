@@ -2,12 +2,15 @@
 # automatically on all fasta files in the current folder
 # Alternatively, set folder with -d
 
+import os
 from Bio import SeqIO,AlignIO
-import argparse,os,re,multiprocessing
+import argparse
+import re
+#import multiprocessing
 
 
 print("PHYLOHANDLER:\nThis script automatically handles fasta datasets to create alignments, trimmed sets and phylo trees.")
-print("usage: python datasethandler-new.py [-i infile.fasta/batch -a pasta -t iqtree -d workdirectory -b bootstrap -n no_dedupe]\n--------------------------------------------------------------------------")
+print("usage: python datasethandler-new.py [-i infile.fasta/batch -a pasta -t iqtree -d workdirectory -b bootstrap]\n--------------------------------------------------------------------------")
 
 #########################
 ####       Fx        ####
@@ -32,17 +35,9 @@ def is_tool(name):
     return which(name) is not None
 
 def find_generation(filename):
-	versionre = r"_v\d+"
-	try:
-		version = re.search(versionre, filename).group(0)
-		#"_vXX" tag found
-		#print("Dataset already versioned:", version)
-		generation = ""
-	except AttributeError:
-		#dataset not versioned
-		versions = [x for x in os.listdir("RESULT") if x.startswith(filename)]
-		versions = [x for x in versions if x.endswith("treefile")]
-		generation = "_v{}".format(len(versions) + 1)
+	versions = [x for x in os.listdir("RESULT") if x.startswith(filename)]
+	versions = [x for x in versions if x.endswith("treefile")]
+	generation = len(versions) + 1
 	return generation
 
 #########################
@@ -50,19 +45,15 @@ def find_generation(filename):
 #########################
 
 parser = argparse.ArgumentParser(description='How to use argparse')
+parser.add_argument('-i', '--infile', help='Fasta/Phylip set to be analyzed', default="batch")
 parser.add_argument('-a', '--aligner', help='Aligner', default='run_pasta.py')
+parser.add_argument('-t', '--treemaker', help='Program for tree inference', default='none')
 parser.add_argument('-b', '--bootstrap', help='Boostrap calculation', action='store_true')
 parser.add_argument('-d', '--directory', help='Change working directory', default='.')
-parser.add_argument('-g', '--no_guide', help='Do not perform guide tree inference', action='store_true')
-parser.add_argument('-i', '--infile', help='Fasta/Phylip set to be analyzed', default="batch")
-parser.add_argument('-m', '--testmodel', help='Test best model', action='store_true')
-parser.add_argument('-n', '--no_dedupe', help='Do not filter duplicates', action='store_true')
-parser.add_argument('-s', '--mark_similarity', help='Mark similarity on branches', action='store_true')
-parser.add_argument('-t', '--treemaker', help='Program for tree inference', default='none')
 
 args = parser.parse_args()
 
-maxcores = multiprocessing.cpu_count() - 1
+maxcores = 10
 ##################################
 #### Create working directory ####
 ##################################
@@ -71,15 +62,17 @@ if os.path.isdir("/Users/morpholino/OwnCloud/"):
 	home = "/Users/morpholino/OwnCloud/"
 elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
 	home = "/Volumes/zoliq data/OwnCloud/"
+elif os.path.isdir("/storage/brno3-cerit/home/fussyz01/"):
+	home = "/storage/brno3-cerit/home/fussyz01/"
 else:
 	print("Please set a homedir")
 if args.directory == ".":
 	print("changing to default directory")
-	defdir = "genomes/chromera/trees/argJ/"
+	defdir = "datasethandler"
 	wd = home + defdir
-	os.chdir(wd)
-else:
-	os.chdir(args.directory)
+	#os.chdir(wd)
+#else:
+#	os.chdir(args.directory)
 
 #this generation counter must be improved or skipped:
 #for generation in range(1,15):
@@ -173,28 +166,25 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "eugLEPTp": "Leptomonas pyrrhocoris", "eugLEPTs": "Leptomonas seymouri",
 "eugNEOBd": "Neobodo designis", "eugPARco": "Paratrypanosoma confusum", "eugPHYTO": "Phytomonas sp em1", 
 "eugTRYPb": "Trypanosoma brucei", 
-"excADUpa": "Aduncisulcus paluster Carplike_NY0171", "excBLATn": "Blattamonas nauphoetae", "excCARPm": "Carpediemonas membranifera", 
-"excCHIca": "Chilomastix caulleri", "excCHIcu": "Chilomastix cuspidata", "excDYSNb": "Dysnectes brevis", 
+"excADUpa": "Aduncisulcus paluster Carplike_NY0171", 
+"excBLATn": "Blattamonas nauphoetae", "excCARPm": "Carpediemonas membranifera", "excCHIca": "Chilomastix caulleri", 
+"excCHIcu": "Chilomastix cuspidata", "excDYSNb": "Dysnectes brevis", 
 "excERGcy": "Ergobibamus cyprinoides", "excGIARi": "Giardia intestinalis P15", "excHISTm": "Histomonas meleagridis", 
-"excIOTAs": "Iotanema sp.", "excKIPFb": "Kipferlia bialata", "excMONOe": "Monocercomonoides exilis", "excNAEgr": "Naegleria gruberi", 
-"excPERco": "Percolomonas cosmopolitus ATCC50343", "excPTRIp": "Paratrimastix pyriformis", 
-"excSPIRs": "Spironucleus salmonicida ATCC50377","excTREPs": "Trepomonas sp. PC1", "excTRIMm": "Trimastix marina", 
-"extTTRIf": "Tritrichomonas foetus",
-"firmBACIa": "Bacillus anthracis", "firmLISTm": "Listeria monocytogenes", "firmSTAPa": "Staphyllococcus aureus", 
-"funASPEf": "Aspergillus fumigatus", "funCRYPn": "Cryptococcus neoformans", "funDEBAh": "Debaryomyces hansenii cbs767", 
-"funLACCb": "Laccaria bicolor", "funNEURc": "Neurospora crassa", "funPUCCg": "Puccinia graminis", 
-"funSCHIp": "Schizosaccharomyces pombe", 
+"excIOTAs": "Iotanema sp.", "excKIPFb": "Kipferlia bialata", 
+"excMONOe": "Monocercomonoides exilis", "excNAEgr": "Naegleria gruberi", "excPERco": "Percolomonas cosmopolitus ATCC50343", 
+"excPTRIp": "Paratrimastix pyriformis", "excSPIRs": "Spironucleus salmonicida ATCC50377",
+"excTREPs": "Trepomonas sp. PC1", "excTRIMm": "Trimastix marina", "extTTRIf": "Tritrichomonas foetus",
+"firmBACIa": "Bacillus anthracis", 
+"firmLISTm": "Listeria monocytogenes", "firmSTAPa": "Staphyllococcus aureus", "funASPEf": "Aspergillus fumigatus", 
+"funCRYPn": "Cryptococcus neoformans", "funDEBAh": "Debaryomyces hansenii cbs767", "funLACCb": "Laccaria bicolor", 
+"funNEURc": "Neurospora crassa", "funPUCCg": "Puccinia graminis", "funSCHIp": "Schizosaccharomyces pombe", 
 "gamaSHEWb": "Shewanella baltica", "gamaVIBRc": "Vibrio cholerae", "gamaYERSp": "Yersinia pestis", 
 "glauGLOEw": "Gloeochaete wittrockiana", "glauCYApa": "Cyanophora paradoxa", 
 "glauCYPTg": "Cyanoptyche gloeocystis SAG4.97", "glauGLOwi": "Gloeochaete wittrockiana SAG46.84", 
-"grnASTEs": "Asterochloris sp.", "grnAUXEp": "Auxenochlorella protothecoides",
 "grnBATHp": "Bathycoccus prasinos", "grnCHLAl": "Chlamydomonas leiostraca", "grnCHLAl": "Chlamydomonas reinhardtii",
-"grnCHLOs": "Chlorella sp.", "grnCHROz": "Chromochloris zofingiensis",
-"grnCOCCs": "Coccomyxa subellipsoidea", "grnDUNAs": "Dunaliella salina", 
-"grnDUNAt": "Dunaliella tertiolecta", 
-"grnGONIp": "Gonium pectorale", "grnHELIs": "Helicosporidium sp.", 
-"grnMICco": "Micromonas commoda", "grnMICpu": "Micromonas pusilla CCMP1545", "grnMICRZ": "Micromonas pusilla", 
-"grnMONOn": "Monoraphidium neglectum", "grnNEPHp": "Nephroselmis pyriformis", "grnOSTRl": "Ostreococcus lucimarinus",
+"grnCOCCs": "Coccomyxa subellipsoidea", "grnHELIs": "Helicosporidium sp.",
+"grnDUNAt": "Dunaliella tertiolecta", "grnMICpu": "Micromonas pusilla CCMP1545", "grnMICRZ": "Micromonas pusilla", 
+"grnMONOn": "Monoraphidium neglectum", "grnNEPHp": "Nephroselmis pyriformis", 
 "grnOSTRm": "Ostreococcus mediterraneus", "grnOSTRt": "Ostreococcus tauri", "grnPICCL": "Picochlorum sp.", 
 "grnPICCY": "Picocystis salinarum", "grnPOLYp": "Polytomella parva", "grnPOLYZ": "Polytomella parva", 
 "grnPRASc": "Prasinococcus capsulatus", "grnPYRam": "Pyramimonas amylifera CCMP720", 
@@ -202,16 +192,16 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "grnTETRs": "Tetraselmis striata", "grnVOLVc": "Volvox carteri f. nagariensis", "hapCALCl": "Calcidiscus leptoporus", 
 "hapCHRYt": "Chrysochromulina tobin", 
 "hapEXANg": "Exanthemachrysis gayraliae", "hapIMANT": "Imantonia sp.", "hapISOCHg": "Isochrysis galbana", 
-"hapPAVLs": "Pavlovales sp. CCMP2435", "hapPHAan": "Phaeocystis antarctica", "hapPHAgl": "Phaeocystis globosa",
+"hapPAVLs": "Pavlovales sp. CCMP2435", "hapPHAan": "Phaeocystis antarctica",
 "hapPHEOC": "Phaeocystis sp.", "hapPLEUc": "Pleurochrysis carterae", "hapPRYMp": "Prymnesium parvum", 
 "hapSCYPH": "Scyphosphaera apsteinii", "hapEMILh": "Emiliania huxleyi", "haptEMIZ": "Emiliania huxleyi", 
 "haptPLEUc": "Pleurochrysis carterae", "haptPRYMp": "Prymnesium parvum Texoma1", 
 "hetPERCO": "Percolomonas cosmopolitus", "kytAMBOt": "Amborella trichopoda", "kytARABt": "Arabidopsis thaliana", 
 "grnARABl": "Arabidopsis lyrata", "grnCHARb": "Chara braunii", 
 "kytGLYCm": "Glycine max", "kytHORDv": "Hordeum vulgare", "kytORYZs": "Oryza sativa Japonica", 
-"kytPHYSp": "Physcomitrella patens", "grnPHYSp": "Physcomitrella patens", "grnPOPtr": "Populus trichocarpa",
-"kytSELAm": "Selaginella moellendorffii", "grnSELAm": "Selaginella moellendorffii", "grnSORGb": "Sorghum bicolor",
-"kytSOlyc": "Solanum lycopersicum", "kytZEAma": "Zea mays", 
+"kytPHYSp": "Physcomitrella patens", "kytSELAm": "Selaginella moellendorffii", "kytSOlyc": "Solanum lycopersicum", 
+"grnPHYSp": "Physcomitrella patens", "grnSELAm": "Selaginella moellendorffii",
+"kytZEAma": "Zea mays", 
 "metANOLc": "Anolis carolinensis", "metCAENe": "Caenorhabditis elegans", 
 "metDAPHp": "Daphnia pulex", "metHELOr": "Helobdella robusta", "metLOAlo": "Loa loa",
 "metLOTTg": "Lottia gigantea", 
@@ -240,37 +230,24 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "strBICOS": "Bicosoecida sp. CB-2014", "strBLASh": "Blastocystis hominis", "strBOLID": "Bolidomonas sp.", 
 "strBOLIp": "Bolidomonas pacifica", "strCAFro": "Cafeteria roenbergensis", "strCAFsp": "Cafeteria sp.", 
 "strCAFca": "Cafeteria str Caron", "strCHATs": "Chattonella subsalsa", "strCHRRH": "Chrysoreinhardia sp.", 
-"strCYCLc": "Cyclotella cryptica",
 "strCYLIN": "Cylindrotheca closterium", "strDETON": "Detonula confervacea", "strDICTY": "Dictyocha speculum", 
 "strDINOB": "Dinobryon sp.", "strDITYL": "Ditylum brightwellii", "strECTsi": "Ectocarpus siliculosus", 
 "strEXTUs": "Extubocellulus spinifer", "strFRAGc": "Fragilariopsis cylindrus", 
-"strFRAGk": "Fragilariopsis kerguelensis", "strFISTs": "Fistulifera solaris",
-"strHETak": "Heterosigma akashiwo", 
+"strFRAGk": "Fragilariopsis kerguelensis", "strHETak": "Heterosigma akashiwo", 
 "strHONDf": "Hondaea fermentalgiana", "strHYALa": "Hyaloperonospora arabidopsidis",
-"strMALLO": "Mallomonas sp.", "strNANNg": "Nannochloropsis gaditana", "strNANNo": "Nannochloropsis oceanica", 
-"strNITZs": "Nitzschia sp.", 
-"strOCHRO": "Ochromonas sp.", "strOCHR2": "Ochromonadaceae sp. CCMP2298",
-"strODONa": "Odontella aurita", "strPARAb": "Paraphysomonas bandaiensis", 
+"strMALLO": "Mallomonas sp.", "strNANNg": "Nannochloropsis gaditana", "strNITZs": "Nitzschia sp.", 
+"strOCHRO": "Ochromonas sp.", "strODONa": "Odontella aurita", "strPARAb": "Paraphysomonas bandaiensis", 
 "strPELAG": "Pelagomonas calceolata", "strPELAs": "Pelagophyceae CCMP2097", "strPHAtr": "Phaeodactylum tricornutum", 
-"strPHEOM": "Phaeomonas parva", 
-"strPHYin": "Phytophtora infestans", "strPHYca": "Phytophthora capsici", "strPHYci": "Phytophthora cinnamomi",
-"strPHYpa": "Phytophthora parasitica", "strPHYra": "Phytophtora ramorum", "strPHYso": "Phytophtora sojae", 
-"strPINGU": "Pinguiococcus pyrenoidosus", 
-"strPOTOs": "Poterioochromonas sp. DS", "strPSEUm": "Pseudo-nitzschia multistriata", 
-"strPSEma": "Pseudo-nitzschia multistriata", "strPSEms": "Pseudo-nitzschia multiseries",
+"strPHEOM": "Phaeomonas parva", "strPHYin": "Phytophtora infestans",
+"strPHYpa": "Phytophthora parasitica", "strPHYra": "Phytophtora ramorum", "strPINGU": "Pinguiococcus pyrenoidosus", 
+"strPOTOs": "Poterioochromonas sp. DS", "strPSEUm": "Pseudo-nitzschia multiseries",
 "strPTERd": "Pteridomonas danica", "strPYTHu": "Pythium ultimum var. sporangiiferum BR650", 
 "strPYTHv": "Pythium vexans", "strRHIZC": "Rhizochromulina marina", "strSAPRd": "Saprolegnia diclina", 
-"strSAPRp": "Saprolegnia parasitica", "strSCHYa": "Schizochytrium aggregatum",
 "strSKEco": "Skeletonema costatum", "strSPUMv": "Spumella vulgaris", 
 "strSTAUR": "Staurosira sp.", "strSYNCR": "Synchroma pusillum", "strTHAoc": "Thalassiosira oceanica",
 "strTHAps": "Thalassiosira pseudonana", "strTHNEM": "Thalassionema frauenfeldii", 
 "strTHNEn": "Thalassionema nitzschioides", "strTHRAc": "Thraustotheca clavata", "strTHRAU": "Thraustochytrium sp.", 
 "strTHTRX": "Thalassiothrix antarctica", "strVAUCl": "Vaucheria litorea"}
-
-#with open("taxarepl9b.tsv", "w") as out:
-#	for key in taxarepl9:
-#		out.write("{}\t{}\n".format(key, taxarepl9[key]))
-#quit("taxarepl9 updated")
 
 #remove bad datasets and bad chars from names
 taxonpattern = r'\[(.+)\]'
@@ -280,10 +257,7 @@ for file in infilelist:
 	extension = file.split(".")[-1]
 	filename = file.replace("." + extension, "")
 	generation = find_generation(filename)
-	if generation == "":
-		print("PHYLOHANDLER: Processing file: {}".format(file))
-	else:
-		print("PHYLOHANDLER: Processing file: {}, version {}".format(file, generation.replace("_", "")))
+	print("PHYLOHANDLER: Processing file: {}, version {}".format(file, generation))
 	if extension in ("fasta", "fas", "fst"):
 		indataset = SeqIO.parse(file, 'fasta')
 	elif extension in ("phy", "phylip"):
@@ -312,9 +286,6 @@ for file in infilelist:
 			if fullrename not in seq_d:
 				if safeseq not in seq_set:
 					seq_d[fullrename] = [fullname, fullrename, safeseq, taxon.replace(" ", "_")]
-				elif args.no_dedupe:
-					print("Duplicate found but deduplication turned off!")
-					seq_d[fullrename] = [fullname, fullrename, safeseq, taxon.replace(" ", "_")]
 				else:
 					errors = True
 					error.write("file:{}\tduplicate sequence, skipping:\n{}\n{}\n".format(file, shortname, safeseq))
@@ -323,7 +294,7 @@ for file in infilelist:
 				error.write("file:{0}\tseq ID not unique, skipping:\n{1}\n{2}\n{1}\n{3}\n".format(file, shortname, safeseq, seq_d[shortname][1]))
 			#print(">" + shortname + "\n" + seq_d[shortname])
 	#here remove the infile so that parallel runs cannot access it:
-	os.rename("{}".format(file), "RESULT/{}{}.{}".format(filename, generation, extension))
+	os.rename("{}".format(file), "RESULT/{}_{}.{}".format(filename, generation, extension))
 	if errors:
 		print("PHYLOHANDLER: Errors occurred during sequence read, please refer to error.log")
 
@@ -363,6 +334,7 @@ for file in infilelist:
 			errors = True
 			error.write("file:{}\tcould not find trimmed alignment\n".format(file))
 			failedfiles.append(file)
+			os.rename("safe-{}.aln".format(filename), "RESULT/nontrimmed{}_{}-ali.fasta".format(filename, generation))
 			print("PHYLOHANDLER: ERROR! Alignment not found! Quitting.")
 			continue
 
@@ -416,29 +388,17 @@ for file in infilelist:
 				else:
 					print("PHYLOHANDLER: Tree inference finished, but treefile is corrupt. Please check")
 			else:
-				#check if iqtree present
+				guidetreecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -pre guide-{0} 1>guide-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
+				treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile 1>final-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
+				if args.bootstrap:
+					treecommand += " -bb 1000"
 				if is_tool("iqtree"):
 					program = "iqtree"
 				elif is_tool("iqtree-omp"):
 					program = "iqtree-omp"
-				elif os.path.isfile("./iqtree"):
-					program = "./iqtree"
 				else:
 					quit("PHYLOHANDLER: FATAL ERROR! iqtree not found")
-
-				#specify iqtree command
-				if args.no_guide:
-					treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta 1>final-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
-				else:
-					guidetreecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -pre guide-{0} 1>guide-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
-					treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile 1>final-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
-				if args.bootstrap:
-					treecommand += " -bb 1000"
-
-				#start inference
-				if args.no_guide:
-					pass
-				elif not os.path.isfile("guide-{0}.treefile".format(filename)):
+				if not os.path.isfile("guide-{0}.treefile".format(filename)):
 					print("PHYLOHANDLER: Issuing software for guide tree inference:\n{} {}".format(program, guidetreecommand))
 					os.system("{} {}".format(program, guidetreecommand))
 				else:
@@ -449,8 +409,7 @@ for file in infilelist:
 			errors = True
 			error.write("file:{}\tcould not find assign software for tree inference\n".format(file))
 			print("PHYLOHANDLER: ERROR assigning software for tree inference!")
-	bestmodel = "LG+F+G" #find using 'grep "Best-fit model:" final-{0}_iqtree.log'.format(filename)
-	print("PHYLOHANDLER:", bestmodel)
+
 	print("PHYLOHANDLER: Tree inference finished, post-processing result files...")
 	#rename branches for presentation purposes:
 	with open("trimfilt-{}.fasta.treefile".format(filename)) as intree,\
@@ -458,13 +417,6 @@ for file in infilelist:
 	open("error.log", "a") as error:
 		try:
 			tree = intree.read()
-			if args.mark_similarity:
-				for key,value in seq_d:
-					try:
-						percentalign = value[4]
-					except IndexError:
-						percentalign = value[1]
-					tree = tree.replace(key, percentalign)
 			for key in taxarepl9:
 				while key in tree:
 					tree = tree.replace(key, taxarepl9[key])
@@ -479,16 +431,16 @@ for file in infilelist:
 	#copy all final files to the RESULTS directory and clean up
 	if args.treemaker != "none":
 		try:
-			os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}{}-iq.treefile".format(filename, generation))
-			os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}{}-iq.treefile".format(filename, generation))
+			os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}_{}-iq.treefile".format(filename, generation))
+			os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}_{}-iq.treefile".format(filename, generation))
 		except:
 			#tree file failure
 			pass
 	#save the alignment files
-	os.rename("trimfilt-{}.fasta".format(filename), "RESULT/{}{}-ali.fasta".format(filename, generation))
-	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}{}-ali.phy".format(filename, generation))
-	#os.rename("{}".format(file), "RESULT/{}{}.{}".format(filename, generation, extension))
-	os.rename("rename-{}.txt".format(filename), "RESULT/{}{}-renamekey.tsv".format(filename, generation))
+	os.rename("trimfilt-{}.fasta".format(filename), "RESULT/{}_{}-ali.fasta".format(filename, generation))
+	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}_{}-ali.phy".format(filename, generation))
+	#os.rename("{}".format(file), "RESULT/{}_{}.{}".format(filename, generation, extension))
+	os.rename("rename-{}.txt".format(filename), "RESULT/{}_{}-renamekey.tsv".format(filename, generation))
 	os.system("mv *{}* temp".format(filename))
 	#os.system("mv trim* temp")
 	#os.system("mv guide* temp")

@@ -26,15 +26,16 @@ ANNOTpattern = r'signature_desc=.+'
 c = 0
 for f in files:
 	c += 1
-	print("Analyzing file {} of {}".format(c, len(files)))
+	print("Processing file {} of {}".format(c, len(files)))
 	with open('interproscan/' + f) as file:
 		data = file.read()
 		annotations = data.split("##FASTA")[0]
 		items = annotations.split("##sequence-region ")
 		for i in items[1:]:
 			query = i.split()[0]
-			seqid = "_".join(query.split("_")[:-1])
+			seqid = "_".join(query.split("_")[:-2]) #:-1 if only the last part >> frame is to be removed
 			frame = query.split("_")[-1]
+			#first find regex in the whole item:
 			GOs = set() #nejak pres RE? 
 			for hit in re.findall(GOpattern, i):
 				GO = hit.replace('"GO:', '')
@@ -67,24 +68,37 @@ for f in files:
 					lower.append(int(columns[3]))
 					upper.append(int(columns[4]))
 			seqrange = "{}-{}".format(min(lower), max(upper))
-			curdict = {"frame": frame, "range": seqrange,"GOs": GOs, "IPSid": IPSid, "family IDs": familyIDs, "signature_desc": signature_desc}
+			curdict = {"frame": frame, "range": seqrange, "GOs": GOs, "IPSid": IPSid, "family IDs": familyIDs, "signature_desc": signature_desc}
 			if seqid not in seq_table:
 				seq_table[seqid] = curdict
 			else:
 				#print("ERROR Duplicate seq entry: {} frames {} & {}".format(seqid, seq_table[seqid]["frame"], frame))
-				newseqid = seqid + "_" + frame
-				seq_table[newseqid] = curdict
+				#uncomment this part to create a new entry:
+				#newseqid = seqid + "_" + frame
+				#seq_table[newseqid] = curdict
+				#uncomment this part to fuse:
+				seq_table[seqid]["GOs"] |= GOs
+				seq_table[seqid]["IPSid"] |= IPSid
+				seq_table[seqid]["family IDs"] |= familyIDs
+				seq_table[seqid]["signature_desc"] |= signature_desc
+
+			#this is to assign annotations to GO codes:
 			for line in i.split("\n"):
 				if '"GO:' in line:
-					match = re.search(GOpattern, line).group().replace('"GO:', '')
-					signature_desc = re.search(ANNOTpattern, line).group().replace('signature_desc=', '').split(";")[0]
+					#this is not stored anywhere?
+					GO = re.search(GOpattern, line).group().replace('"GO:', '')
+					try:
+						signature_desc = re.search(ANNOTpattern, line).group().replace('signature_desc=', '').split(";")[0]
+					except AttributeError:
+						print("No signature:", line)
+						signature_desc = re.search(FAMpattern, line).group().replace('signature_desc=', '').split(";")[0]
 					if GO not in GOs_annotation:
 						GOs_annotation[GO] = {signature_desc}
 					else:
 						GOs_annotation[GO].add(signature_desc)
 
 with open("foundGOs.txt", "w") as result:
-	print("Writing found GO terms to file...")
+	print("Writing found GO terms to files...")
 	result.write("GO\tfunction\tseq IDs\n")
 	for k in sorted(GOs_seqlist.keys()):
 		printids = " ".join(GOs_seqlist[k])
@@ -97,7 +111,10 @@ with open("foundGOs.txt", "w") as result:
 			print(function, type(function))
 		result.write("{}\t{}\t{}\n".format(k, printfx, printids))
 
-with open("IPStable.txt", "w") as result:
+#reduce reported gene number to gene clusters -> see Jankoviny/fish
+with open("IPStable.txt", "w") as result, open("GOtable.txt", "w") as result2,\
+open("GO-WEGO.txt", "w") as result3, open("goatools-association.tsv", "w") as result4,\
+open("population_from_IPS.tsv", "w") as result5:
 	print("Writing IPS table to file...")
 	result.write("SeqID\tframe\tRANGE\tGOterms\tIPS ID\tFamily ID\tsignature description\n")
 	for k in sorted(seq_table.keys()):
@@ -107,6 +124,13 @@ with open("IPStable.txt", "w") as result:
 		if len(printgo) == 0:
 			printgo = ""
 		else:
+			gos_goa = ["GO:" + x for x in printgo]
+			gos_goa.sort()
+			gos = [x for x in printgo]
+			gos.sort()
+			result2.write("{}\t{}\n".format(k, ",".join(gos)))
+			result3.write("{}\t{}\n".format(k, "\t".join(gos_goa)))
+			result4.write("{}    {}\n".format(k, ",".join(gos_goa)))
 			printgo = " ".join(printgo)
 		printips = seq_table[k]["IPSid"]
 		if len(printips) == 0:
@@ -124,5 +148,6 @@ with open("IPStable.txt", "w") as result:
 		else:
 			printsignature = " ".join(printsignature)
 		result.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(k, printframe, printrange, printgo, printips, printfamily, printsignature))
+		result5.write("{}\n".format(k))
 
 print("parsing finished")

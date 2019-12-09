@@ -10,7 +10,7 @@ parser.add_argument('-r', '--results', help='Comma separated blast result file(s
 
 args = parser.parse_args()
 outpool = args.query.split(".")[0]
-results = args.results.split(",") #results is always a list!
+results = args.results.split(",")
 print(results)
 
 def seqparse(fastafile):
@@ -35,6 +35,17 @@ if not os.path.isdir("diamond_out"):
 
 print("DIAMONDPARSE: Starting...")
 #FILENAMES:
+NR_BLASTOUT = 'nr.out'
+REFSEQ_BLASTOUT = 'refseq.out'
+MMETSP_BLASTOUT = 'mmetsp.out'
+HAPTO_BLASTOUT = 'hapto.out'
+DEF_BLASTOUT = 'diamond.out'
+PHAEOCYSTIS = ["phaant_nt.out", "phaglo_nt.out", "phaant.out", "phaglo.out"]
+
+if results == ["genescreen"]:
+	results = [NR_BLASTOUT, REFSEQ_BLASTOUT, MMETSP_BLASTOUT] + PHAEOCYSTIS
+
+
 SORTDIR = 'diamond_out/'
 QUERYFILE = args.query
 LOG = 'Diamond-mod-log.txt' #NOTE this is for a different than default-setting diamond outfiles
@@ -58,6 +69,9 @@ for BLASTOUT in results:
 	with open(BLASTOUT) as infile:
 		for line in infile:
 			line = line.strip().split("\t")
+			if len(line) < 6:
+				print(line)
+				continue
 			query = line[0]
 			hitname = line[1]
 			hitdesc = line[-2]
@@ -69,16 +83,19 @@ for BLASTOUT in results:
 					hitname = "Chaetoceros-UNC1202_" + hitname.replace("-ChaeIllumina", "")
 				elif hitname.endswith("NitzIllumina"):
 					hitname = "Nitzschia-sp.-RCC80_" + hitname.replace("-NitzIllumina", "")
-			if BLASTOUT == "nr.out":
+			if BLASTOUT == NR_BLASTOUT:
 				#modify fasta header if description available
 				#NOTE: for REFSEQ_BLASTOUT there are no descriptions
 				if hitname != hitdesc:
-					taxon = re.search(taxonpattern, hitdesc).group(1)
+					try:
+						taxon = re.search(taxonpattern, hitdesc).group(1)
+					except AttributeError:
+						taxon = False
 					if taxon:
 						hitdesc = hitdesc.replace("PREDICTED: ", "")
 						taxon = "_".join(taxon.split()[:2])
 						hitdesc = hitdesc.split(" [")[0]
-						hitname = "{}_{}".format(taxon, hitdesc)
+						hitname = f'{taxon}_{hitdesc}'
 			if query not in sequence_dict:
 				print("ERROR! unspecified query:", query)
 			else:
@@ -91,7 +108,7 @@ if args.pool in {True, "True", "true"}:
 		for query in sequence_dict:
 			for item in sequence_dict[query]:
 				#print(item)
-				hitseq = sequence_dict[query][item]
+				hitseq = sequence_dict[query][item].replace("-", "")
 				#print(hitseq)
 				#print(item, hitseq)
 				if hitseq not in uniqseqs:

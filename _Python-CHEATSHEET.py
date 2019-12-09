@@ -8,18 +8,55 @@ notincluded = io.open("abstracts.txt", "r", encoding="utf-8") #this is an analog
 
 import csv
 csv.reader(open("cafe_table.tsv"), delimiter="\t", skipinitialspace=True)
+#or read csv/tsv as dictionary:
+with open('enz2annot.txt', 'r') as f:
+	reader = csv.reader(f, delimiter='\t', skipinitialspace=True)
+	next(reader) #another way to skip first line
+	enz2annot = {r[0]: r[1] for r in reader}
+
+#read csv with numpy:
+import numpy as np
+path = 'data/population.csv'
+data = np.genfromtxt(path, delimiter=',', names=True)
+
+#read csv with pandas:
+import pandas as pd
+path = 'data/population.csv'
+df = pd.read_csv(path, skiprows=1, delimiter="\t")
+# Set the country code as index of the DataFrame
+df = df.set_index('Country Code')
+
+#>> melt is to merge several value columns into one, yielding two categories and one value column
+melted = pd.melt(df, "layer", var_name="value") 
+
+#do stuff for pandas subsets!
+for i,k in enumerate(df.column.unique())
+    groups = df.groupby('column')
+    for name, group in groups:
+        print(name, group) #group is a df subset!
 
 break vs continue #break ends the for loop, continue ends the cycle for the current item
 pass #use with if statements
 
 import re
 IPSpattern = r'"InterPro: (\w+)'
-IPSID = re.search(IPSpattern, line).group(1)
-for hit in re.findall(IPSpattern, i):
+taxonpattern = r'\[(.+)\]' #to find taxons in fasta descriptions
+genbankpattern = r'[A-Z]{1,3}(_)?\d+(\.\d)?'
+taxon = re.search(taxonpattern, desc).group(1)
+if taxon:
+	taxon = "_".join(taxon.split()[:2])
+	desc = f'{taxon}_{desc.split(" [")[0]}'
+#this is to find the matching string
+IPSID = re.search(IPSpattern, somestring).group(1)
+#this is to iterate though matches
+for hit in re.findall(IPSpattern, somestring):
 	blabla
 #POZOR, re.match hleda na zacatku stringu
 
 remove() vs discard()
+
+#zipping two lists into a list of tuples:
+gradebook = list(zip(libraries, completion))
 
 import os
 #to run os commands
@@ -40,10 +77,11 @@ maxevalue = 0.01
 maxhits = ''
 if os.path.isfile("vbra_all_blast_mmetsp.xml") == False:
 	print('{} -query {} -db {} -out {} -evalue {} -outfmt {} -word_size {} -num_threads {}'.format(cmd, query, db, out, evalue, outfmt, word_size, threads))
-	os.system('{} -query {} -db {} -out {} -evalue {} -outfmt {} -word_size {} -num_threads {}'.format(cmd, query, db, out, evalue, outfmt, word_size, threads))
+	#or
+	os.system(f'{cmd} -query {query} -db {db} -out {out} -evalue {evalue} -outfmt {outfmt} -word_size {word_size} -num_threads {threads}')
 
 #or
-os.system('targetp -P {}-out.fasta > {}-targetp.txt'.format(prefix, prefix))
+os.system('targetp -P {0}-out.fasta > {0}-targetp.txt'.format(prefix))
 
 os.chdir("some/dir")
 files = os.listdir('.')
@@ -56,6 +94,8 @@ os.chdir(wd)
 
 if os.stat(fname).st_size > 0: #check for file size
 	something()
+
+if any(x in rank for x in goodgroups)
 
 directory_walker = os.walk('.')
 for d in directory:
@@ -130,11 +170,23 @@ seq_dict = OrderedDict()
 hightaxon = high_taxon_assignment_d.get(genus, "unassigned")
 
 
-#read csv/tsv as dictionary:
-import csv
-with open('enz2annot.txt', 'r') as f:
-	reader = csv.reader(f, delimiter='\t')
-	enz2annot = {r[0]: r[1] for r in reader}
+#open a defined-size pandas dataframe with zeroes filled in:
+df = pd.DataFrame(0.00, index=y_axis, columns=x_axis)
+
+#subset dataframe
+sub = df[df["column"].isin(filterset)]
+sub = df[df["value"] == filtervalue]
+
+#join two existing dataframes on indexes
+df = df1.join(df2, how="outer")
+#join existing dataframes when the outer has multiple instances of the lattes - autofill by station
+bdf = bdf.join(sdf.set_index('Station'), on="Station#")
+
+
+#write as tsv:
+df.to_csv(path_or_buf='{}_maxdiffs_pd.out'.format(prefix), float_format='%0.3f', sep="\t")
+np.savetxt('{}_maxdiffs.out'.format(prefix), nparray, fmt='%0.3f', delimiter='\t')
+#i.e. print tsv, with numbers truncated to three decimal places -> fmt/float_format
 
 
 from Bio import SeqIO,AlignIO
@@ -223,6 +275,24 @@ data = np.genfromtxt('file.pdb') #effective way how to import tables directly in
 array = data[:, -3:] #if the data is here
 np.mean(data[:,-3:], axis=0) #mean along the vertical axis, more or less means calculate centroid
 
+def get_cmap(n, name='viridis'): #hsv for very divergent data?
+    '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
+    RGB color; the keyword argument name must be a standard mpl colormap name.'''
+    colormap = plt.cm.get_cmap(name, n)
+    rgbcolors = []
+    for i in range(colormap.N):
+        rgb = colormap(i)[:3] # will return rgba, we take only first 3 so we get rgb
+        rgbcolors.append(matplotlib.colors.rgb2hex(rgb))
+    return rgbcolors
+ 
+cmap = get_cmap(len(categories))
+colors = {}
+for i, X in enumerate(categories):
+    colors[X] = cmap[i] #hopefully this is still recognized as a color
+print(colors)
+# also color = cmap.pop() works nicely
+
+
 
 def query_yes_no(question, default="yes"):
 	"""Ask a yes/no question via raw_input() and return their answer.
@@ -263,6 +333,35 @@ def query_yes_no(question, default="yes"):
 			sys.stdout.write("Please respond with 'yes' or 'no' "
 							 "(or 'y' or 'n').\n")
 
+
+
+#read only the first lines, without use of the counter
+def read_ten(file_like_object):
+    for line_number in range(10):
+        x = file_like_object.readline()
+        print(f"{line_number} = {x.strip()}")
+
+
+
+###################
+from Bio import Entrez
+from ete3 import NCBITaxa
+#http://etetoolkit.org/docs/2.3/tutorial/tutorial_ncbitaxonomy.html
+ncbi = NCBITaxa()
+Entrez.email = 'zoltan.fussy@gmail.com'
+
+def force_taxid(accession):
+	print("WARNING: missing taxid in input file taxified.x.out, requesting from NCBI server")
+	prot = Entrez.efetch(db='protein', id=accession, rettype='gb', retmode='text')
+	prot_record = SeqIO.read(prot, 'genbank')
+	orgn = prot_record.annotations['organism']
+	name2taxid = ncbi.get_name_translator([orgn])
+	taxid = name2taxid[orgn][0]
+	print("Organism retrieved:", orgn, taxid)
+
+	return taxid
+
+
 def delbadchars(string):
 	""" remove unneeded characters """
 	badchars = ("|+,:;()' ") #also []/@
@@ -274,6 +373,18 @@ def delbadchars(string):
 	result = "".join(n)
 	return result
 
+def del_pattern(nodename):
+	partpattern = r'p\d+'
+	try:
+		partID = re.search(partpattern, nodename).group()
+		nodename = nodename.replace(partID, "")
+		#this also works
+		#for hit in re.findall(partpattern, nodename):
+		#	nodename = nodename.replace(hit, "")
+	except:
+		pass
+		#print(f"No pattern in {nodename}")
+	return nodename
 
 def is_tool(name):
     """Check whether `name` is on PATH and marked as executable."""
