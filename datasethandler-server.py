@@ -62,6 +62,10 @@ parser.add_argument('-a', '--aligner', help='Aligner', default='mafft')
 parser.add_argument('-t', '--treemaker', help='Program for tree inference', default='iqtree')
 #seq processing
 parser.add_argument('-n', '--no_dedupe', help='Do not filter duplicates', action='store_true')
+#aligner params
+parser.add_argument('--alignerparams', help='Non-default aligner parameters, check with manual', default='')
+#trimal params
+parser.add_argument('--trimalparams', help='Non-default TrimAl parameters, check with manual', default='')
 #main params for tree inference
 parser.add_argument('-b', '--ufbootstrap', help='Ultra-fast boostrap calculation', action='store_true')
 parser.add_argument('-B', '--bootstrap', help='Boostrap calculation', action='store_true')
@@ -357,16 +361,25 @@ for file in infilelist:
 		print("PHYLOHANDLER: Alignment detected, previous data not cleaned?")
 	else:
 		if args.aligner == "run_pasta.py":
-			command = "{0} -d protein -i safe-{1}.fasta -j {1} -o {2}".format(args.aligner, filename, outdir)
+			if args.alignerparams == "":
+				command = "{0} -d protein -i safe-{1}.fasta -j {1} -o {2}".format(args.aligner, filename, outdir)
+			else:
+				command = "{0} -d protein -i safe-{1}.fasta -j {1} -o {2}".format(args.aligner, filename, outdir, args.alignerparams)
 		elif args.aligner == "mafft":
-			command = "{0} --maxiterate 1000 --localpair --thread {2} safe-{1}.fasta > safe-{1}.aln 2>{1}_mafft.log".format(args.aligner, filename, maxcores)
+			if args.alignerparams == "":
+				command = "{0} --maxiterate 1000 --localpair --thread {2} safe-{1}.fasta > safe-{1}.aln 2>{1}_mafft.log".format(args.aligner, filename, maxcores)
+			else:
+				command = "{0} --thread {2} safe-{1}.fasta > safe-{1}.aln 2>{1}_mafft.log {3}".format(args.aligner, filename, maxcores, args.alignerparams)
 		os.system(command)
 		print("PHYLOHANDLER: Issuing aligner\n" + command)
 
 	#copy and rename PASTA alignment to current directory and issue trimal
 	if args.aligner == "run_pasta.py":
 		os.system("cp ./{1}/{0}.marker001.safe-{0}.aln ./safe-{0}.aln".format(filename, outdir))
-		command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename) #-gappyout / -automated1 / -gt 0.3
+		if args.trimalparams == "":
+			command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename) #-gappyout / -automated1 / -gt 0.3
+		else:
+			command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta {1}".format(filename, args.trimalparams)
 		print("PHYLOHANDLER: Issuing trimmer:\n{}".format(command))
 		os.system(command)
 	elif args.aligner == "mafft":
