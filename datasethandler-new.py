@@ -71,15 +71,24 @@ if os.path.isdir("/Users/morpholino/OwnCloud/"):
 	home = "/Users/morpholino/OwnCloud/"
 elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
 	home = "/Volumes/zoliq data/OwnCloud/"
+# elif os.path.isdir("/usr/local/scratch/METAGENOMICS/zfussy/"):
+# 	home = "/usr/local/scratch/METAGENOMICS/zfussy/"
+# 	print("PHYLOHANDLER: Home dir exists!")
 else:
 	print("Please set a homedir")
 if args.directory == ".":
-	print("changing to default directory")
+	print("PHYLOHANDLER: changing to default directory")
 	defdir = "genomes/chromera/trees/argJ/"
 	wd = home + defdir
 	os.chdir(wd)
 else:
-	os.chdir(args.directory)
+	if args.directory.startswith("/") or args.directory.startswith("~"):
+		print("PHYLOHANDLER: changing to specified directory:", args.directory)
+		os.chdir(args.directory)
+	else:
+		wd = home + args.directory
+		print("PHYLOHANDLER: changing to specified directory:", wd)
+		os.chdir(wd)
 
 #this generation counter must be improved or skipped:
 #for generation in range(1,15):
@@ -285,9 +294,19 @@ for file in infilelist:
 	else:
 		print("PHYLOHANDLER: Processing file: {}, version {}".format(file, generation.replace("_", "")))
 	if extension in ("fasta", "fas", "fst"):
-		indataset = SeqIO.parse(file, 'fasta')
+		try:
+			indataset = SeqIO.parse(file, 'fasta')
+		except FileNotFoundError:
+			#file is missing, check next file - 
+			print("\tFile not found, skipping...")
+			continue
 	elif extension in ("phy", "phylip"):
-		indataset = SeqIO.parse(file, 'phylip')
+		try:
+			indataset = SeqIO.parse(file, 'phylip')
+		except FileNotFoundError:
+			#file is missing, check next file
+			print("\tFile not found, skipping...")
+			continue
 	else:
 		continue
 	#load fasta
@@ -363,6 +382,7 @@ for file in infilelist:
 			errors = True
 			error.write("file:{}\tcould not find trimmed alignment\n".format(file))
 			failedfiles.append(file)
+			#os.rename("safe-{}.aln".format(filename), "RESULT/nontrimmed{}{}-ali.fasta".format(filename, generation))
 			print("PHYLOHANDLER: ERROR! Alignment not found! Quitting.")
 			continue
 
@@ -379,7 +399,7 @@ for file in infilelist:
 			else:
 				result.write(">{}\n{}".format(r.id, r.seq))
 			#use this loop to add data to modify the rename code
-			curlength = "{}_{:.2f}%aligned".format(r.id, 100*(len(str(r.seq).replace("-", ""))/len(r.seq)))
+			curlength = "{}_{:.2f}%aligned".format(r.id, 100*(len(str(r.seq).replace("-", "").replace("X", ""))/len(r.seq)))
 			seq_d[r.id].append(curlength)
 			##############
 			##############
@@ -428,7 +448,7 @@ for file in infilelist:
 
 				#specify iqtree command
 				if args.no_guide:
-					treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta 1>final-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
+					treecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta 1>final-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
 				else:
 					guidetreecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -pre guide-{0} 1>guide-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
 					treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile 1>final-{0}_iqtree.log".format(filename, maxcores) #GTR20 only for very large datasets
@@ -453,37 +473,39 @@ for file in infilelist:
 	print("PHYLOHANDLER:", bestmodel)
 	print("PHYLOHANDLER: Tree inference finished, post-processing result files...")
 	#rename branches for presentation purposes:
-	with open("trimfilt-{}.fasta.treefile".format(filename)) as intree,\
-	open("final-{}.fasta.treefile".format(filename), "w") as outtree,\
-	open("error.log", "a") as error:
-		try:
-			tree = intree.read()
-			if args.mark_similarity:
-				for key,value in seq_d:
-					try:
-						percentalign = value[4]
-					except IndexError:
-						percentalign = value[1]
-					tree = tree.replace(key, percentalign)
-			for key in taxarepl9:
-				while key in tree:
-					tree = tree.replace(key, taxarepl9[key])
-			outtree.write(tree)
-		except FileNotFoundError:
-			errors = True
-			error.write("file:{}\tcould not find treefile\n".format(file))
-			failedfiles.append(file)
-			print("PHYLOHANDLER: ERROR! Treefile not found! Stopping.")
-			continue
+	try:
+		with open("trimfilt-{}.fasta.treefile".format(filename)) as intree,\
+		open("final-{}.fasta.treefile".format(filename), "w") as outtree,\
+		open("error.log", "a") as error:
+			try:
+				tree = intree.read()
+				for key in taxarepl9:
+					while key in tree:
+						tree = tree.replace(key, taxarepl9[key])
+				outtree.write(tree)
+			except FileNotFoundError:
+				errors = True
+				error.write("file:{}\tcould not load treefile\n".format(file))
+				failedfiles.append(file)
+				print("PHYLOHANDLER: ERROR! Treefile not loaded! Skipping to next.")
+		#copy all final files to the RESULTS directory and clean up
+		if args.treemaker != "none":
+			try:
+				os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}_{}-iq.treefile".format(filename, generation))
+				os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}_{}-iq.treefile".format(filename, generation))
+			except FileNotFoundError:
+				#tree file failure
+				errors = True
+				error.write("file:{}\tcould not move treefiles\n".format(file))
+				failedfiles.append(file)
+				print("PHYLOHANDLER: ERROR! Treefile could not be moved found! Skipping to next.")
+	except FileNotFoundError:
+		#could not open tree file, but other files can be cleaned
+		errors = True
+		error.write("file:{}\tcould not find treefile\n".format(file))
+		failedfiles.append(file)
+		print("PHYLOHANDLER: ERROR! Treefile not found! Skipping to next.")
 
-	#copy all final files to the RESULTS directory and clean up
-	if args.treemaker != "none":
-		try:
-			os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}{}-iq.treefile".format(filename, generation))
-			os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}{}-iq.treefile".format(filename, generation))
-		except:
-			#tree file failure
-			pass
 	#save the alignment files
 	os.rename("trimfilt-{}.fasta".format(filename), "RESULT/{}{}-ali.fasta".format(filename, generation))
 	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}{}-ali.phy".format(filename, generation))

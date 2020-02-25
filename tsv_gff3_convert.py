@@ -19,6 +19,7 @@ codechange = {"Ala": "A", "Arg": "R", "Asn": "N",
 if infileparam == "batch":
 	infiles = os.listdir('.')
 	infiles = [f for f in infiles if f.endswith("all_modules.txt")]
+	#example of these files in bico/genomeseq/spadesfilt/draft genome/mito_proteome/*
 else: 
 	infiles = [infileparam]
 

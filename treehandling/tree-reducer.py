@@ -10,12 +10,11 @@ elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
 	home = "/Volumes/zoliq data/OwnCloud/"
 else:
 	print("Please set a homedir")
-wd = home + "genomes/euglena longa/trees/todo"
-os.chdir(wd)
 
 print("This script removes unwanted branches from a dataset based on an input nexus tree.")
 print("Mark the branches to be removed in the input tree by a colour (using FigTree). Please use basic colours or format found in your nex file. ")
-print("usage: python tree-reducer.py -i eno.fasta -t testtree.nex [-p prefix_for_filtered -d working_directory -O -c all]\n--------------------------------------------------------------------------")
+print("usage: python tree-reducer.py -i eno.fasta -t testtree.nex [-p prefix_for_filtered -d working_directory -O -c all]\n")
+print('for batches, move to dir of interest, then:\nfor i in *fasta; do j="${i%.fasta}" && python ~/OwnCloud/progs/PYTHON/treehandling/tree-reducer.py -f $i -t $j.treefile -p v2 -O; done')
 #WIN:black = #-16777216, #000000; green = #-16737997, #009933
 
 
@@ -28,8 +27,15 @@ parser.add_argument('-d', '--directory', help='Change working directory', defaul
 parser.add_argument('-O', '--no_omitted', help='Supress omitted', action='store_true')
 
 args = parser.parse_args()
-os.chdir(args.directory)
+if args.directory == ".":
+	#wd = home + "genomes/euglena longa/trees/todo"
+	wd = os.getcwd()
+	print(wd)
+	os.chdir(wd)
+else:
+	os.chdir(args.directory)
 
+print(args.fastain)
 if args.fastain.split(".")[-1] in ("fasta", "fas", "fst"):
 	indataset = SeqIO.parse(args.fastain, 'fasta')
 elif args.fastain.split(".")[-1] in ("phy", "phylip"):
@@ -259,7 +265,7 @@ for line in treelines:
 	else:
 		break
 
-errorfile = open("_key_errors.txt", "w")
+errorfile = open("_key_errors.txt", "a")
 print("done loading taxa")
 if not args.no_omitted:
 	print("omitted taxa listed in omitted-{}".format(args.fastain))
@@ -301,3 +307,4 @@ if not args.no_omitted:
 else:
 	print("\t{} taxa omitted".format(skippedc))
 print("Filtering finished!")
+print("\n--------------------------------------------------------------------------")

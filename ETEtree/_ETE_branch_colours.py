@@ -44,7 +44,7 @@ def tag_replace(string):
 ### DATA READ ###
 #################
 
-filename = "Alb3_v82-iq"
+filename = "LYSA_4.1.1.20_v4-blue"
 
 if os.path.isdir("/Users/morpholino/OwnCloud/"):
     home = "/Users/morpholino/OwnCloud/"

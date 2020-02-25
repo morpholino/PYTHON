@@ -29,6 +29,8 @@ df = df.set_index('Country Code')
 #>> melt is to merge several value columns into one, yielding two categories and one value column
 melted = pd.melt(df, "layer", var_name="value") 
 
+a_list.append() vs. a_list.extend(["another", "list"]) #append adds whatever argument as a single item
+
 #do stuff for pandas subsets!
 for i,k in enumerate(df.column.unique())
     groups = df.groupby('column')
@@ -160,18 +162,54 @@ import time
 print("Start time:", time.ctime())
 print("Finish time:", time.ctime())
 
-
+######################
+####     MAIN     ####
+######################
 
 from collections import OrderedDict
 #creates an ordered dictionary
+#but all dicts are ordered now!
 seq_dict = OrderedDict()
 
 #to avoid dictionary KeyErrors:
 hightaxon = high_taxon_assignment_d.get(genus, "unassigned")
 
+#modify df params:
+def start():
+	options = {
+		"display": {
+			"max_columns": None,
+			"max_colwidth": 25,
+			"expand_frame_repr": False,
+			"max_rows": 14,
+			"max_seq_items": 50,
+			"precision": 4,
+			"show_dimensions": True
+		},
+		"mode": {
+			"chained_assignment": None
+		}
+	}
+	for category, option in options.items():
+		for op, value in option.items():
+			pd.set_option(f"{category}.{op}", value)
+if __name__ == "__main__":
+	start()
+	del start
+#>> save as pandas_tricks.py, then call by export PYTHONSTARTUP="pandas_tricks.py" in Terminal?
 
 #open a defined-size pandas dataframe with zeroes filled in:
 df = pd.DataFrame(0.00, index=y_axis, columns=x_axis)
+#fill iteratively
+for x in some_list:
+    for y in another_list:
+        df.loc[x, y] = value
+
+#make some fake data with test
+import pandas.util.testing as tm
+tm.N, tm.K = 15, 3 #rows, columns
+tm.makeTimeDataFrame(freq="M").head()
+[i for i in dir(tm) if i.startswith("make")]
 
 #subset dataframe
 sub = df[df["column"].isin(filterset)]
@@ -179,9 +217,10 @@ sub = df[df["value"] == filtervalue]
 
 #join two existing dataframes on indexes
 df = df1.join(df2, how="outer")
-#join existing dataframes when the outer has multiple instances of the lattes - autofill by station
+#join existing dataframes when the outer has multiple instances of the latter - autofill by station
 bdf = bdf.join(sdf.set_index('Station'), on="Station#")
-
+#alternatively, merge: 
+df = df.merge(df1, how="left", left_on=["transcript_id"], right_on=["transcript_id"])
 
 #write as tsv:
 df.to_csv(path_or_buf='{}_maxdiffs_pd.out'.format(prefix), float_format='%0.3f', sep="\t")
@@ -262,6 +301,10 @@ for f in tqdm(files, desc="progress"):
 with open(queryfile) as f:
 	seqcount = f.read().count(">")
 print("Sequence reading progress: {:.1f}%".format(100*(c / seqcount)))
+
+
+locals() #local variables?
+dir(any_object) #print the structure of an object
 
 ############################
 ####  useful functions  ####

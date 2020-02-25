@@ -16,7 +16,8 @@ elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
 else:
 	print("Please set a homedir")
 
-wd = "genomes/phaeocystis/annotation/sulfur metabolism/phaeocystis"
+#wd = "AndyLab/Lysine pathway/v2"
+wd = "AndyLab/Phaeocystis/annotation/polyamines"
 #wd = "DolezalLab/SecY/"
 os.chdir(home + wd)
 

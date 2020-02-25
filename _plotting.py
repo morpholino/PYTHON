@@ -121,6 +121,9 @@ plt.legend(loc="center right", framealpha = 0, labelspacing=0.2, borderaxespad=0
 plt.savefig(kmean + "_shade_plots.pdf")                                      
 plt.show()
 #####
+#https://python4astronomers.github.io/plotting/advanced.html
+#tricks for multiple axes
+
 #do stuff for pandas subsets!
 for i,k in enumerate(df.column.unique())
     groups = df.groupby('column')
@@ -184,3 +187,61 @@ c = ax.scatter(theta, r, c=colors, s=area, cmap='hsv', alpha=0.75)
 
 ax.set_rorigin(-2.5)
 ax.set_theta_zero_location('W', offset=10)
+
+#################################################################
+#https://towardsdatascience.com/a-step-by-step-guide-for-creating-advanced-python-data-visualizations-with-seaborn-matplotlib-1579d6a1a7d0
+#create an irregular array of plots => 7+1
+
+freq = ((df_gp.Age.value_counts(normalize = True).reset_index().sort_values(by = 'index').Age)*100).tolist()
+number_gp = 7
+# freq = the percentage for each age group, and there’re 7 age groups.
+def ax_settings(ax, var_name, x_min, x_max):
+    ax.set_xlim(x_min,x_max)
+    ax.set_yticks([])
+    
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    
+    ax.spines['bottom'].set_edgecolor('#444444')
+    ax.spines['bottom'].set_linewidth(2)
+    
+    ax.text(0.02, 0.05, var_name, fontsize=17, fontweight="bold", transform = ax.transAxes) 
+    return None
+# Manipulate each axes object in the left. Try to tune some parameters and you'll know how each command works.
+fig = plt.figure(figsize=(12,7))
+gs = gridspec.GridSpec(nrows=number_gp, 
+                       ncols=2, 
+                       figure=fig, 
+                       width_ratios= [3, 1],
+                       height_ratios= [1]*number_gp,
+                       wspace=0.2, hspace=0.05
+                      )
+ax = [None]*(number_gp + 1)
+features = ['0-17', '18-25', '26-35', '36-45', '46-50', '51-55', '55+']
+# Create a figure, partition the figure into 7*2 boxes, set up an ax array to store axes objects, and create a list of age group names.  
+for i in range(number_gp):
+    ax[i] = fig.add_subplot(gs[i, 0])
+    
+    ax_settings(ax[i], 'Age: ' + str(features[i]), -1000, 20000)    
+    
+    sns.kdeplot(data=df_gp[(df_gp.Gender == 'M') & (df_gp.Age == features[i])].Purchase, 
+            ax=ax[i], shade=True, color="blue",  bw=300, legend=False)
+    sns.kdeplot(data=df_gp[(df_gp.Gender == 'F') & (df_gp.Age == features[i])].Purchase, 
+            ax=ax[i], shade=True, color="red",  bw=300, legend=False)
+    
+    if i < (number_gp - 1): 
+        ax[i].set_xticks([])
+# this 'for loop' is to create a bunch of axes objects, and link them to GridSpec boxes. Then, we manipulate them with sns.kdeplot() and ax_settings() we just defined.
+ax[0].legend(['Male', 'Female'], facecolor='w')
+# adding legends on the top axes object     
+ax[number_gp] = fig.add_subplot(gs[:, 1])
+ax[number_gp].spines['right'].set_visible(False)
+ax[number_gp].spines['top'].set_visible(False)
+ax[number_gp].barh(features, freq, color='#004c99', height=0.4)
+ax[number_gp].set_xlim(0,100)
+ax[number_gp].invert_yaxis()
+ax[number_gp].text(1.09, -0.04, '(%)', fontsize=10, transform = ax[number_gp].transAxes)   
+ax[number_gp].tick_params(axis='y', labelsize = 14)
+# manipulate the bar plot on the right. Try to comment out some of the commands to see what they actually do to the bar plot.
+plt.show()
