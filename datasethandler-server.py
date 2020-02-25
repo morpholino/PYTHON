@@ -63,15 +63,15 @@ parser.add_argument('-t', '--treemaker', help='Program for tree inference', defa
 #seq processing
 parser.add_argument('-n', '--no_dedupe', help='Do not filter duplicates', action='store_true')
 #aligner params
-parser.add_argument('--alignerparams', help='Non-default aligner parameters, check with manual', default='')
+parser.add_argument('--alignerparams', help='Custom aligner parameters, check with manual', default='')
 #trimal params
-parser.add_argument('--trimalparams', help='Non-default TrimAl parameters, check with manual', default='')
+parser.add_argument('--trimalparams', help='Custom TrimAl parameters, check with manual', default='')
 #main params for tree inference
 parser.add_argument('-b', '--ufbootstrap', help='Ultra-fast boostrap calculation', action='store_true')
 parser.add_argument('-B', '--bootstrap', help='Boostrap calculation', action='store_true')
 parser.add_argument('--shalrt', help='Calculate SH-aLRT', action='store_true')
 parser.add_argument('-g', '--no_guide', help='Do not perform guide tree inference', action='store_true')
-parser.add_argument('--treeparams', help='Non-default tree inference parameters, check with manual', default='')
+parser.add_argument('--treeparams', help='Custom tree inference parameters, check with manual', default='')
 #parser.add_argument('-m', '--testmodel', help='Test best model', action='store_true') #not implemented
 #post-processing
 parser.add_argument('-s', '--mark_similarity', help='Mark similarity on branches', action='store_true')
