@@ -78,9 +78,6 @@ parser.add_argument('-s', '--mark_similarity', help='Mark similarity on branches
 
 args = parser.parse_args()
 
-print(args.trimalparams)
-print(args.aligner)
-quit()
 maxcores = 20
 ##################################
 #### Create working directory ####
