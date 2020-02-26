@@ -11,7 +11,9 @@ import re
 
 
 print("PHYLOHANDLER:\nThis script automatically handles fasta datasets to create alignments, trimmed sets and phylo trees.")
-print("usage: python datasethandler-new.py [-i infile.fasta/batch -a pasta -t iqtree -d workdirectory -b bootstrap]\n--------------------------------------------------------------------------")
+print("usage: python datasethandler-new.py [-i infile.fasta/batch -a pasta -t iqtree -d workdirectory -b bootstrap]\n\
+       use custom settings for alignment/trimming/tree inference using the following formula: --treeparams='-m TEST'\n\
+--------------------------------------------------------------------------")
 
 #########################
 ####       Fx        ####
@@ -60,12 +62,13 @@ parser.add_argument('-i', '--infile', help='Fasta/Phylip set to be analyzed', de
 #programs used
 parser.add_argument('-a', '--aligner', help='Aligner', default='mafft')
 parser.add_argument('-t', '--treemaker', help='Program for tree inference', default='iqtree')
+parser.add_argument('--maxcores', help='Maximum cores to use for multithreading', default=20)
 #seq processing
 parser.add_argument('-n', '--no_dedupe', help='Do not filter duplicates', action='store_true')
 #aligner params
 parser.add_argument('--alignerparams', nargs='*', action="store", help='Custom aligner parameters, check with manual', default='')
 #trimal params
-parser.add_argument('--trimalparams', nargs='*', action="store", help='Custom TrimAl parameters, check with manual')
+parser.add_argument('--trimalparams', nargs='*', action="store", help='Custom TrimAl parameters, check with manual', default='')
 #main params for tree inference
 parser.add_argument('-b', '--ufbootstrap', help='Ultra-fast boostrap calculation', action='store_true')
 parser.add_argument('-B', '--bootstrap', help='Boostrap calculation', action='store_true')
@@ -77,8 +80,12 @@ parser.add_argument('--treeparams', nargs='*', action="store", help='Custom tree
 parser.add_argument('-s', '--mark_similarity', help='Mark similarity on branches', action='store_true')
 
 args = parser.parse_args()
+alignerparams = " ".join(args.alignerparams)
+trimalparams = " ".join(args.trimalparams)
+treeparams = " ".join(args.treeparams)
 
-maxcores = 20
+print("PHYLOHANDLER: Check custom params settings:")
+print("ALI:", alignerparams, "TRIM:", trimalparams, "TREE:", treeparams)
 ##################################
 #### Create working directory ####
 ##################################
