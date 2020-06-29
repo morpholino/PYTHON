@@ -44,7 +44,7 @@ def tag_replace(string):
 ### DATA READ ###
 #################
 
-filename = "LYSA_4.1.1.20_v4-blue"
+filename = "concat_slowsites2_0.8_newick"
 
 if os.path.isdir("/Users/morpholino/OwnCloud/"):
     home = "/Users/morpholino/OwnCloud/"
@@ -86,11 +86,12 @@ with open('_ancestors.tsv', 'r') as f:
         ancestors_d.update({r[0]: [r[1], r[2]] for r in reader})
     except IndexError:
         #incomplete line
-        pass
-#print(ancestors_d)
+        print("Incomplete processing of ancestor lineages!")
+        print(ancestors_d)
 
 try:
     ancestor = t.get_common_ancestor(ancestors_d[filename])
+    #print(ancestor)
     t.set_outgroup(ancestor)
 except KeyError:
     print("Root not selected!")
@@ -163,10 +164,11 @@ circular_style.scale = 100
 circular_style.arc_start = -90 # 0 degrees = 3 o'clock
 circular_style.arc_span = 330
 
-
+pruned = []
 #now for something completely different, tree traverse
 for node in t.traverse():
     if node.is_leaf():
+        pruned.append(node)
         local = locdata.get(node.name, "no pred")
         leafcolor = colors.get(local, "black")
         node.add_features(color=leafcolor)
@@ -175,7 +177,7 @@ for node in t.traverse():
         node.img_style["vt_line_color"] = leafcolor
         node.img_style["hz_line_color"] = leafcolor
         node.img_style["hz_line_width"] = 2
-        node.name = tag_replace(node.name) #make s
+        #node.name = tag_replace(node.name) #make s
         #print(node.name)
         #node.set_style(leaf)
         #print(node.name, local)
@@ -189,10 +191,19 @@ for node in t.traverse():
 #to check tree is annotated:
 #print(t.get_ascii(attributes=["name", "abundance"], show_internal=True)) 
 #color and abundance are new features
-
+#pruned.sort()
+print("all terminal branches:", len(pruned))
+with open("concat_slowsites2_skip.txt") as f:
+    skipnodes = f.read().split("\n")
+    skipnodes = [x.split("[&!")[0] for x in skipnodes]
+    print("To be pruned:\n{}\n{}\n".format(len(skipnodes), "\n".join(skipnodes)))
+pruned = [x for x in pruned if x.name not in skipnodes]
+print("remain after pruning:", len(pruned))
+t.prune(pruned, preserve_branch_length=True)
 
 #ts.legend.add_face(fig, column=0) #does not work
 #t.show(tree_style=ts)
+t.write(format=0, outfile="{}_pruned.treefile".format(filename))
 t.render(filename + "_c.pdf", w=400, units="mm", tree_style=ts)
 
 if all_lineages_found == False:

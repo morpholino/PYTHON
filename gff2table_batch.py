@@ -8,7 +8,9 @@ elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
 	homedir = "/Volumes/zoliq data/OwnCloud/"
 else:
 	print("Please set a homedir")
-wd = homedir + "Jankoviny/Tick_transcriptome/"
+defdir = "Jankoviny/Tick_transcriptome/"
+defdir = "AndyLab/Phaeocystis/annotations_comparison"
+wd = homedir + defdir
 
 os.chdir(wd)
 

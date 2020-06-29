@@ -14,6 +14,7 @@ args = parser.parse_args()
 outpool = args.query.split(".")[0]
 results = args.results.split(",")
 print(results)
+print(args.skip_queries, args.skip_dupes)
 
 def seqparse(fastafile):
 	seqdict = {}
@@ -60,7 +61,7 @@ LOG = 'Diamond-mod-log.txt' #NOTE this is for a different than default-setting d
 ###################
 
 #create seq dictionary based on query file
-sequence_dict,queries = seqparse(QUERYFILE)
+sequence_dict,queries = seqparse(QUERYFILE) #sequence_dict = {queryname: queryseq}; queries = {queryseqs}
 querynames = set(sequence_dict.keys())
 seq_count = len(list(sequence_dict.keys()))
 print("DIAMONDPARSE: Sequences extracted from query file: {}".format(seq_count))
@@ -75,7 +76,7 @@ for BLASTOUT in results:
 		for line in infile:
 			line = line.strip().split("\t")
 			if len(line) < 6:
-				print(line)
+				print("Not enough columns!", line)
 				continue
 			query = line[0]
 			hitname = line[1]
@@ -118,9 +119,7 @@ if args.pool in {True, "True", "true"}:
 					#skip any query sequence
 					if item in querynames:
 						continue
-				#print(item)
 				hitseq = sequence_dict[query][item].replace("-", "")
-				#print(hitseq)
 				#print(item, hitseq)
 				if hitseq not in uniqseqs:
 					#original sequences are written; unless --skip_queries, queries will be written too
@@ -140,14 +139,23 @@ else:
 	print("DIAMONDPARSE: pooling disabled, hit sequences in {}".format(SORTDIR))
 	for query in sequence_dict:
 		uniqseqs = set()
+		uniqnames = set()
 		with open("{}{}_out.fasta".format(SORTDIR, query.replace("/", "_")), "w") as result: 
 			for item in sequence_dict[query]:
-				#print(item)
+				if args.skip_queries == True:
+					#skip any query sequence
+					if item in querynames:
+						continue
 				hitseq = sequence_dict[query][item]
-				#print(hitseq)
 				#print(item, hitseq)
 				if hitseq not in uniqseqs:
 					uniqseqs.add(hitseq)
+					uniqnames.add(item)
 					result.write(">{}\n{}\n".format(item, hitseq))
+				elif item not in uniqnames:
+					#duplicates are either written or not - comment the write command
+					uniqnames.add(item)
+					if args.skip_dupes != True:
+						result.write(">{}\n{}\n".format(item, hitseq))
 
 print("DIAMONDPARSE: Extracted proteins written to files. Finished.")

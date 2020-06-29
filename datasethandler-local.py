@@ -1,13 +1,9 @@
 # Performs fasta header renaming, and calls mafft and trimal to align and trim datasets 
 # automatically on all fasta files in the current folder
 # Alternatively, set folder with -d
-# the same script as in progr/PYTHON but server addresses are changed...
 
-import os
 from Bio import SeqIO,AlignIO
-import argparse
-import re
-#import multiprocessing
+import argparse,os,re,multiprocessing
 
 
 print("PHYLOHANDLER:\nThis script automatically handles fasta datasets to create alignments, trimmed sets and phylo trees.")
@@ -20,7 +16,7 @@ print("usage: python datasethandler-new.py [-i infile.fasta/batch -a pasta -t iq
 #########################
 
 def delbadchars(string):
-	badchars = ("|+,:;()' =") #also []/@
+	badchars = ("|+,:;()' ") #also []/@
 	n = []
 	for c in string:
 		if c in badchars:
@@ -39,19 +35,16 @@ def is_tool(name):
 
 def find_generation(filename):
 	versionre = r"_v\d+"
-	if args.versioning:
-		try:
-			version = re.search(versionre, filename).group(0)
-			#"_vXX" tag found
-			#print("Dataset already versioned:", version)
-			generation = ""
-		except AttributeError:
-			#dataset not versioned
-			versions = [x for x in os.listdir("RESULT") if x.startswith(filename)]
-			versions = [x for x in versions if x.endswith("treefile")]
-			generation = "_v{}".format(len(versions) + 1)
-	else:
+	try:
+		version = re.search(versionre, filename).group(0)
+		#"_vXX" tag found
+		#print("Dataset already versioned:", version)
 		generation = ""
+	except AttributeError:
+		#dataset not versioned
+		versions = [x for x in os.listdir("RESULT") if x.startswith(filename)]
+		versions = [x for x in versions if x.endswith("treefile")]
+		generation = "_v{}".format(len(versions) + 1)
 	return generation
 
 #########################
@@ -64,15 +57,14 @@ parser.add_argument('-d', '--directory', help='Change working directory', defaul
 parser.add_argument('-i', '--infile', help='Fasta/Phylip set to be analyzed', default="batch")
 #programs used
 parser.add_argument('-a', '--aligner', help='Aligner', default='mafft')
-parser.add_argument('--trimmer', help='Trimmer', default='trimal')
 parser.add_argument('-t', '--treemaker', help='Program for tree inference', default='iqtree')
-parser.add_argument('--maxcores', help='Maximum cores to use for multithreading', default=10)
+parser.add_argument('--maxcores', help='Maximum cores to use for multithreading', default=10) #too much for regular computers!
 #seq processing
 parser.add_argument('-n', '--no_dedupe', help='Do not filter duplicates', action='store_true')
 #aligner params
 parser.add_argument('--alignerparams', nargs='*', action="store", help='Custom aligner parameters, check with manual', default='')
-#trimming params
-parser.add_argument('--trimmerparams', nargs='*', action="store", help='Custom trimmer parameters, check with manual', default='')
+#trimal params
+parser.add_argument('--trimalparams', nargs='*', action="store", help='Custom TrimAl parameters, check with manual', default='')
 #main params for tree inference
 parser.add_argument('-b', '--ufbootstrap', help='Ultra-fast boostrap calculation', action='store_true')
 parser.add_argument('-B', '--bootstrap', help='Boostrap calculation', action='store_true')
@@ -82,15 +74,17 @@ parser.add_argument('--treeparams', nargs='*', action="store", help='Custom tree
 #parser.add_argument('-m', '--testmodel', help='Test best model', action='store_true') #not implemented
 #post-processing
 parser.add_argument('-s', '--mark_similarity', help='Mark similarity on branches', action='store_true')
-parser.add_argument('--versioning', help='Mark versions for datasets', action='store_true')
 
 args = parser.parse_args()
 alignerparams = " ".join(args.alignerparams)
-trimmerparams = " ".join(args.trimmerparams)
+trimalparams = " ".join(args.trimalparams)
 treeparams = " ".join(args.treeparams)
 
 print("PHYLOHANDLER: Check custom params settings:")
-print("ALIGN:", alignerparams, "|TRIM:", trimmerparams, "|TREE:", treeparams)
+print("ALIGN:", alignerparams, "|TRIM:", trimalparams, "|TREE:", treeparams)
+
+#defaulut max cores too many for computers!
+maxcores = multiprocessing.cpu_count() - 1
 ##################################
 #### Create working directory ####
 ##################################
@@ -99,21 +93,15 @@ if os.path.isdir("/Users/morpholino/OwnCloud/"):
 	home = "/Users/morpholino/OwnCloud/"
 elif os.path.isdir("/Volumes/zoliq data/OwnCloud/"):
 	home = "/Volumes/zoliq data/OwnCloud/"
-elif os.path.isdir("/storage/brno3-cerit/home/fussyz01/"):
-	home = "/storage/brno3-cerit/home/fussyz01/"
-	print("PHYLOHANDLER: Home dir exists!")
-elif os.path.isdir("/mnt/mokosz/home/zoli/trees/"):
-	home = "/mnt/mokosz/home/zoli/trees/"
-	print("PHYLOHANDLER: Home dir exists!")
-elif os.path.isdir("/usr/local/scratch/METAGENOMICS/zfussy/"):
-	home = "/usr/local/scratch/METAGENOMICS/zfussy/"
-	print("PHYLOHANDLER: Home dir exists!")
+# elif os.path.isdir("/usr/local/scratch/METAGENOMICS/zfussy/"):
+# 	home = "/usr/local/scratch/METAGENOMICS/zfussy/"
+# 	print("PHYLOHANDLER: Home dir exists!")
 else:
 	print("Please set a homedir")
-if args.directory == ".": 	#called by a qsub script following copying to scratch
+if args.directory == ".":
 	print("PHYLOHANDLER: changing to default directory")
-	defdir = "" 			#"datasethandler" >> commented to calculate on scratch
-	wd = "." 				#home + defdir >> commented to calculate on scratch
+	defdir = "genomes/chromera/trees/argJ/"
+	wd = home + defdir
 	os.chdir(wd)
 else:
 	if args.directory.startswith("/") or args.directory.startswith("~"):
@@ -145,7 +133,7 @@ if os.path.isdir("RESULT") == False:
 #	reader = csv.reader(f, delimiter='\t')
 #	tax2lineage = {r[0]: r[1] for r in reader}
 
-allowed = ("fasta", "fas", "fst", "fa", "faa", "phy", "phylip")
+allowed = ("fasta", "fas", "fst", "phy", "phylip")
 if args.infile == "batch":
 	infilelist = [x for x in os.listdir(".") if x.split(".")[-1] in allowed]
 	infilelist = [x for x in infilelist if not x.startswith("safe")] #bc these have been created by a previous run
@@ -155,7 +143,7 @@ elif args.infile.split(".")[-1] in allowed:
 else:
 	quit("file type not recognized - is it fasta/fas/fst or phy/phylip?")
 
-infilelist.sort() #sort(reverse=True) if you need a parallel run for many datasets - datasethandler-reverse.py
+infilelist.sort() #sort(reverse=True) if you need a parallel run for many datasets
 print("PHYLOHANDLER: Files to be analyzed: " + ", ".join(infilelist))
 #outdir only needed for pasta
 #print("PHYLOHANDLER: Data output to dir: " + outdir)
@@ -310,6 +298,11 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "strTHNEn": "Thalassionema nitzschioides", "strTHRAc": "Thraustotheca clavata", "strTHRAU": "Thraustochytrium sp.", 
 "strTHTRX": "Thalassiothrix antarctica", "strVAUCl": "Vaucheria litorea"}
 
+#with open("taxarepl9b.tsv", "w") as out:
+#	for key in taxarepl9:
+#		out.write("{}\t{}\n".format(key, taxarepl9[key]))
+#quit("taxarepl9 updated")
+
 #remove bad datasets and bad chars from names
 taxonpattern = r'\[(.+)\]'
 errors = False
@@ -370,7 +363,7 @@ for file in infilelist:
 					error.write("file:{}\tduplicate sequence, skipping:\n{}\n{}\n".format(file, shortname, safeseq))
 			else:
 				errors = True
-				error.write("file:{0}\tseq ID not unique, skipping:\n{1}\n{2}\n{1}\n{3}\n".format(file, shortname, safeseq, seq_d[fullrename][1]))
+				error.write("file:{0}\tseq ID not unique, skipping:\n{1}\n{2}\n{1}\n{3}\n".format(file, shortname, safeseq, seq_d[shortname][1]))
 			#print(">" + shortname + "\n" + seq_d[shortname])
 	if errors:
 		print("PHYLOHANDLER: Errors occurred during sequence read, please refer to error.log")
@@ -397,29 +390,23 @@ for file in infilelist:
 				command = "{0} --maxiterate 1000 --localpair --thread {2} safe-{1}.fasta > safe-{1}.aln 2>{1}_mafft.log".format(args.aligner, filename, args.maxcores)
 			else:
 				command = "{0} {3} --thread {2} safe-{1}.fasta > safe-{1}.aln 2>{1}_mafft.log".format(args.aligner, filename, args.maxcores, alignerparams)
-		print("PHYLOHANDLER: Issuing aligner\n" + command)
 		os.system(command)
+		print("PHYLOHANDLER: Issuing aligner\n" + command)
 
 	#copy and rename PASTA alignment to current directory and issue trimal
-	if args.aligner in ["run_pasta.py", "mafft"]:
-		if args.trimmer == "trimal":
-			if args.trimmerparams == "":
-				command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -automated1".format(filename) #-gappyout / -automated1 / -gt 0.3
-			else:
-				command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta {1}".format(filename, trimmerparams)
-		elif args.trimmer == "bmge":
-			if args.trimmerparams == "":
-				command = "bmge -i ./safe-{0}.aln -t AA -m BLOSUM75 -g 0.7 -of trim-{0}.aln".format(filename) #-gappyout / -automated1 / -gt 0.3
-			else:
-				command = "bmge -i ./safe-{0}.aln -of trim-{0}.aln {1}".format(filename, trimmerparams)
-		else:
-			print("unknown trimmer specified")
-
 	if args.aligner == "run_pasta.py":
 		os.system("cp ./{1}/{0}.marker001.safe-{0}.aln ./safe-{0}.aln".format(filename, outdir))
+		if args.trimalparams == "":
+			command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.3".format(filename) #-gappyout / -automated1 / -gt 0.3
+		else:
+			command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta {1}".format(filename, trimalparams)
 		print("PHYLOHANDLER: Issuing trimmer:\n{}".format(command))
 		os.system(command)
 	elif args.aligner == "mafft":
+		if args.trimalparams == "":
+			command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -automated1".format(filename) #-gappyout / -automated1 / -gt 0.3
+		else:
+			command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta {1}".format(filename, trimalparams)
 		print("PHYLOHANDLER: Issuing trimmer:\n{}".format(command))
 		os.system(command)
 	elif args.aligner == "-":
@@ -427,19 +414,18 @@ for file in infilelist:
 		pass
 
 	#check alignment length!
-	if args.aligner != "-":
-		length = AlignIO.read("trim-{0}.aln".format(filename), "fasta").get_alignment_length()
-		if length < 20:
-			print("PHYLOHANDLER: Retrimming alignment of lenght <20!")
-			if args.aligner == "run_pasta.py":
-				os.system("cp ./{1}/{0}.marker001.safe-{0}.aln ./safe-{0}.aln".format(filename, outdir))
-			command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.1".format(filename)
-			os.system(command)
+	length = AlignIO.read("trim-{0}.aln".format(filename), "fasta").get_alignment_length()
+	if length < 20:
+		print("PHYLOHANDLER: Retrimming alignment of lenght <20!")
+		if args.aligner == "run_pasta.py":
+			os.system("cp ./{1}/{0}.marker001.safe-{0}.aln ./safe-{0}.aln".format(filename, outdir))
+		command = "trimal -in ./safe-{0}.aln -out trim-{0}.aln -fasta -gt 0.1".format(filename)
+		os.system(command)
 
 	#open trimal-trimmed alignment for dumping any gaps-only sequences
 	outfile1, outfile2 = "trimfilt-{0}.fasta".format(filename), "trimfilt-{0}.phy".format(filename)
-	with open("error.log", "a") as error:
-		if args.aligner != "-":
+	if args.aligner != "-":
+		with open("error.log", "a") as error:
 			try:
 				trimalignmentfile = AlignIO.read("trim-{0}.aln".format(filename), "fasta")
 				print("PHYLOHANDLER: Trimming finished, loading alignment")
@@ -451,33 +437,27 @@ for file in infilelist:
 				print("PHYLOHANDLER: ERROR! Alignment not found! Quitting.")
 				continue
 
-			#filter out any sequences that are gaps-only after trimming
-			filtalignmentfile = [record for record in trimalignmentfile if record.seq.count("-") != len(record.seq) and len(record.seq) != 0]
-			#uniqtrimseqs = set()
-			with open(outfile1, "w") as result:
-				#count number of remaining sequences and their length
-				for index, r in enumerate(filtalignmentfile):
-					#get rid of the trailing newline character at the end of file:
-					if index != len(filtalignmentfile) - 1:
-						result.write(">{}\n{}\n".format(r.id, r.seq)) #r.description includes seqlen
-					else:
-						result.write(">{}\n{}".format(r.id, r.seq))
-					#use this loop to add data to modify the rename code
-					curlength = "{}_{:.2f}%aligned".format(r.id, 100*(len(str(r.seq).replace("-", "").replace("X", ""))/len(r.seq)))
-					try:
-						seq_d[r.id].append(curlength)
-					except:
-						print("WARNING: data processing impaired because of sequence:", r.id)
-						errors = True
-						error.write("file:{} data processing impaired because of sequence: {}\n".format(file, r.id))
-						continue
-					##############
-					##############
-					##############
-				count, length = len(filtalignmentfile), trimalignmentfile.get_alignment_length()
-		else:
-			count = len(seq_d.keys())
-			length = AlignIO.read(outfile1, "fasta").get_alignment_length()
+		#filter out any sequences that are gaps-only after trimming
+		filtalignmentfile = [record for record in trimalignmentfile if record.seq.count("-") != len(record.seq) and len(record.seq) != 0]
+		#uniqtrimseqs = set()
+		with open(outfile1, "w") as result:
+			#count number of remaining sequences and their length
+			for index, r in enumerate(filtalignmentfile):
+				#get rid of the trailing newline character at the end of file:
+				if index != len(filtalignmentfile) - 1:
+					result.write(">{}\n{}\n".format(r.id, r.seq)) #r.description includes seqlen
+				else:
+					result.write(">{}\n{}".format(r.id, r.seq))
+				#use this loop to add data to modify the rename code
+				curlength = "{}_{:.2f}%aligned".format(r.id, 100*(len(str(r.seq).replace("-", "").replace("X", ""))/len(r.seq)))
+				seq_d[r.id].append(curlength)
+				##############
+				##############
+				##############
+			count, length = len(filtalignmentfile), trimalignmentfile.get_alignment_length()
+	else:
+		count = len(seq_d.keys())
+		length = AlignIO.read(outfile1, "fasta").get_alignment_length()
 
 	print("PHYLOHANDLER: Post-trimming performed.")
 	print("Trimming produced a file with {} sequences of {} sites".format(count, length))
@@ -582,8 +562,8 @@ for file in infilelist:
 		#copy all final files to the RESULTS directory and clean up
 		if args.treemaker != "none":
 			try:
-				os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}{}-iq.treefile".format(filename, generation))
-				os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}{}-iq.treefile".format(filename, generation))
+				os.rename("trimfilt-{}.fasta.treefile".format(filename), "RESULT/{}_{}-iq.treefile".format(filename, generation))
+				os.rename("final-{}.fasta.treefile".format(filename), "RESULT/_{}_{}-iq.treefile".format(filename, generation))
 			except FileNotFoundError:
 				#tree file failure
 				errors = True
@@ -602,11 +582,7 @@ for file in infilelist:
 	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}{}-ali.phy".format(filename, generation))
 	#os.rename("{}".format(file), "RESULT/{}{}.{}".format(filename, generation, extension))
 	os.rename("rename-{}.txt".format(filename), "RESULT/{}{}-renamekey.tsv".format(filename, generation))
-	os.system("mv {}_mafft.log temp".format(filename))
-	os.system("mv *{}_iqtree.log temp".format(filename))
-	os.system("mv guide-{}* temp".format(filename))
-	os.system("mv safe-{}* temp".format(filename))
-	os.system("mv trim*{}* temp".format(filename))
+	os.system("mv *{}* temp".format(filename))
 	#os.system("mv trim* temp")
 	#os.system("mv guide* temp")
 	print("#############\n")

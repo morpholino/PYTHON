@@ -14,6 +14,10 @@ with open('enz2annot.txt', 'r') as f:
 	next(reader) #another way to skip first line
 	enz2annot = {r[0]: r[1] for r in reader}
 
+#import matplotlib without Xcode library
+import matplotlib
+matplotlib.use("Agg")
+
 #read csv with numpy:
 import numpy as np
 path = 'data/population.csv'
@@ -22,9 +26,10 @@ data = np.genfromtxt(path, delimiter=',', names=True)
 #read csv with pandas:
 import pandas as pd
 path = 'data/population.csv'
-df = pd.read_csv(path, skiprows=1, delimiter="\t")
+df = pd.read_csv(path, skiprows=1, delimiter="\t", names=["freq", "count"])
 # Set the country code as index of the DataFrame
 df = df.set_index('Country Code')
+df = df.loc[:,['Jan','Feb', 'Mar']] # use to rearrange the layer ordering
 
 #>> melt is to merge several value columns into one, yielding two categories and one value column
 melted = pd.melt(df, "layer", var_name="value") 
@@ -224,9 +229,13 @@ df = df.merge(df1, how="left", left_on=["transcript_id"], right_on=["transcript_
 
 #write as tsv:
 df.to_csv(path_or_buf='{}_maxdiffs_pd.out'.format(prefix), float_format='%0.3f', sep="\t")
+df.to_pickle("./file.pkl.gz", compression="gzip")
+df = pd.read_pickle("./file.pkl")
 np.savetxt('{}_maxdiffs.out'.format(prefix), nparray, fmt='%0.3f', delimiter='\t')
 #i.e. print tsv, with numbers truncated to three decimal places -> fmt/float_format
 
+#to sort two lists in python:
+ascendingtotals, ascendingtaxa = (list(x) for x in zip(*sorted(zip(unsortedList, unsortedTaxa)))) #parameters as reverse=True cannot be applied for *sorted
 
 from Bio import SeqIO,AlignIO
 #handling Fasta inputs
@@ -239,6 +248,9 @@ with open('Split_fasta.txt', 'a') as result:
         name = sequence.name
         seq = sequence.seq
         result.write('{}\t{}\n'.format(name,seq))
+import gzip
+with gzip.open('interproscan/' + f, "rt") as file:
+	data = file.read() #from a gzipped file
 with open("safe-seq.fasta") as infile, open("safe-seq.phy", "w") as outfile:
 	alignmentfile = AlignIO.read(infile, "fasta") 
 	#apparently also works as follows:
@@ -450,12 +462,24 @@ def overlaps(moduleA, moduleB):
 			overlap = "overlap"
 	elif startA <= endB <= endA:
 		overlap = "overlap"
-	elif startB <= startA <= endB and startB <= startB <= endB:
+	elif startB <= startA <= endB and startB <= endA <= endB:
 		overlap = "embed"
 	else:
 		overlap = "none"
 	return overlap
 
+def overlaps(moduleA, moduleB):
+	startA = moduleA[0]
+	endA = moduleA[1]
+	startB = moduleB[0]
+	endB = moduleB[1]
+	if startA <= startB <= endA or startA <= endB <= endA:
+		overlap = "overlap"
+	elif startB <= startA <= endB or startB <= endA <= endB:
+		overlap = "overlap"
+	else:
+		overlap = "none"
+	return overlap
 
 def decor(string):
 	def wrap():
@@ -463,3 +487,4 @@ def decor(string):
 		print(string)
 		print("===============")
 	return wrap
+

@@ -35,11 +35,6 @@ if args.directory == ".":
 else:
 	os.chdir(args.directory)
 
-if args.prefix == "-":
-	prefix = "_"
-else:
-	prefix = args.prefix
-
 print(args.fastain)
 if args.fastain.split(".")[-1] in ("fasta", "fas", "fst", "fa", "faa"):
 	indataset = SeqIO.parse(args.fastain, 'fasta')
@@ -291,7 +286,7 @@ if not args.no_omitted:
 
 print("writing filtered dataset...")
 #write results
-with open('{}{}'.format(prefix, args.fastain), 'w') as out:
+with open('{}-{}'.format(args.prefix, args.fastain), 'w') as out:
 	for taxon in alltaxa:
 		nohighertaxon = taxon.split("@")[0]
 		nospacetaxon = taxon.replace(" ","_")
@@ -306,7 +301,7 @@ with open('{}{}'.format(prefix, args.fastain), 'w') as out:
 				print("!!!!!KEY ERROR for filtered", taxon)
 				errorfile.write("filtered:\t{}\n".format(taxon))
 
-print("WRITING DONE, \n\t{} taxa kept in {}{},".format(keptc, prefix, args.fastain))
+print("WRITING DONE, \n\t{} taxa kept in {}-{},".format(keptc, args.prefix, args.fastain))
 if not args.no_omitted:
 	print("\t{} taxa omitted in omitted-{}".format(skippedc, args.fastain))
 else:
