@@ -399,7 +399,7 @@ def read_ten(file_like_object):
 
 
 ###################
-from Bio import Entrez
+from Bio import Entrez,SeqIO
 from ete3 import NCBITaxa
 #http://etetoolkit.org/docs/2.3/tutorial/tutorial_ncbitaxonomy.html
 ncbi = NCBITaxa()

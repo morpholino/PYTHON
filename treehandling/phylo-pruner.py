@@ -13,7 +13,7 @@ else:
 
 print("This script removes unwanted branches from a dataset based on an input nexus tree.")
 print("Mark the branches to be removed in the input tree by a colour (using FigTree). Please use basic colours or format found in your nex file. ")
-print("usage: python tree-reducer.py -i eno.fasta -t testtree.nex [-p prefix_for_filtered -d working_directory -O -c all]")
+print("usage: python phylo-pruner.py -f eno.fasta -t testtree.nex [-p prefix_for_filtered -d working_directory -O -c all]")
 print('for batches, move to dir of interest, then:\nfor i in *fasta; do j="${i%.fasta}" && python ~/OwnCloud/progs/PYTHON/treehandling/tree-reducer.py -f $i -t $j.treefile -p v2 -O; done\n')
 #WIN:black = #-16777216, #000000; green = #-16737997, #009933
 

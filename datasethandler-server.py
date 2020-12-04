@@ -3,10 +3,8 @@
 # Alternatively, set folder with -d
 # the same script as in progr/PYTHON but server addresses are changed...
 
-import os
+import os,re,argparse
 from Bio import SeqIO,AlignIO
-import argparse
-import re
 #import multiprocessing
 
 
@@ -18,6 +16,30 @@ print("usage: python datasethandler-new.py [-i infile.fasta/batch -a pasta -t iq
 #########################
 ####       Fx        ####
 #########################
+
+def find_iqtree_version():
+	versionpattern = r'version (\w+)'
+	command = os.popen("iqtree -h").read()
+	command = command.split("\n")[0]
+	version = re.search(versionpattern, command)
+	if version:
+		iqversion = version.group(1)
+		print("IQTREE version:", iqversion)
+	else:
+		iqversion = "1"
+	return iqversion
+
+def find_iqtree_model(filename):
+	modelpattern = r'Best-fit model: (\w+)'
+	command = os.popen("grep 'Best-fit model:' {}".format(filename)).read()
+	command = command.split("\n")[0]
+	model = re.search(modelpattern, command)
+	if model:
+		iqmodel = model.group(1)
+		print("IQTREE model:", iqmodel)
+	else:
+		iqmodel = "N/D"
+	return iqmodel
 
 def delbadchars(string):
 	badchars = ("|+,:;()' =") #also []/@
@@ -145,11 +167,12 @@ if os.path.isdir("RESULT") == False:
 #	reader = csv.reader(f, delimiter='\t')
 #	tax2lineage = {r[0]: r[1] for r in reader}
 
-allowed = ("fasta", "fas", "fst", "fa", "faa", "phy", "phylip")
+allowed = ("fasta", "fas", "fst", "fa", "faa", "fna", "phy", "phylip")
 if args.infile == "batch":
 	infilelist = [x for x in os.listdir(".") if x.split(".")[-1] in allowed]
 	infilelist = [x for x in infilelist if not x.startswith("safe")] #bc these have been created by a previous run
 	infilelist = [x for x in infilelist if not x.startswith("trim")] #bc these have been created by a previous run
+	infilelist = [x for x in infilelist if not x.startswith("guide")] #bc these have been created by a previous run
 elif args.infile.split(".")[-1] in allowed:
 	infilelist = [args.infile]
 else:
@@ -322,7 +345,9 @@ for file in infilelist:
 		print("PHYLOHANDLER: Processing file: {}".format(file))
 	else:
 		print("PHYLOHANDLER: Processing file: {}, version {}".format(file, generation.replace("_", "")))
-	if extension in ("fasta", "fas", "fst", "fa", "faa"):
+	if args.aligner == "-":
+		print("PHYLOHANDLER: User-defined aligner skip, processing file as alignment")
+	if extension in ("fasta", "fas", "fst", "fa", "faa", "fna"):
 		try:
 			indataset = [x for x in SeqIO.parse(file, 'fasta')]
 		except FileNotFoundError:
@@ -397,6 +422,11 @@ for file in infilelist:
 				command = "{0} --maxiterate 1000 --localpair --thread {2} safe-{1}.fasta > safe-{1}.aln 2>{1}_mafft.log".format(args.aligner, filename, args.maxcores)
 			else:
 				command = "{0} {3} --thread {2} safe-{1}.fasta > safe-{1}.aln 2>{1}_mafft.log".format(args.aligner, filename, args.maxcores, alignerparams)
+		elif "prank" in args.aligner:
+			if args.alignerparams == "":
+				command = "./{0} -iterate=5 -d=safe-{1}.fasta -o=safe-{1}.aln 2>{1}_prank.log".format(args.aligner, filename, args.maxcores)
+			else:
+				command = "./{0} {3} -d=safe-{1}.fasta -o=safe-{1}.aln 2>{1}_prank.log".format(args.aligner, filename, args.maxcores, alignerparams)
 		print("PHYLOHANDLER: Issuing aligner\n" + command)
 		os.system(command)
 
@@ -412,6 +442,11 @@ for file in infilelist:
 				command = "bmge -i ./safe-{0}.aln -t AA -m BLOSUM75 -g 0.7 -of trim-{0}.aln".format(filename) #-gappyout / -automated1 / -gt 0.3
 			else:
 				command = "bmge -i ./safe-{0}.aln -of trim-{0}.aln {1}".format(filename, trimmerparams)
+		elif "divvier" in args.trimmer:
+			if args.trimmerparams == "":
+				command = "./divvier -divvy -mincol 4 -divvygap ./safe-{0}.aln && mv ./safe-{0}.aln.divvy.fas trim-{0}.aln".format(filename) #-gappyout / -automated1 / -gt 0.3
+			else:
+				command = "./divvier {1} ./safe-{0}.aln && mv ./safe-{0}.aln*fas trim-{0}.aln".format(filename, trimmerparams)
 		else:
 			print("unknown trimmer specified")
 
@@ -507,12 +542,12 @@ for file in infilelist:
 				if os.stat("trimfilt-{}.fasta.treefile".format(filename)).st_size > 0: #check for file size
 					print("PHYLOHANDLER: Tree inference finished, previous data not cleaned?")
 				else:
-					print("PHYLOHANDLER: Tree inference finished, but treefile is corrupt. Please check")
+					print("PHYLOHANDLER: Tree inference finished previously, but treefile is corrupt. Please check")
 			else:
 				#check if iqtree present
 				if is_tool("iqtree"):
 					program = "iqtree"
-				elif is_tool("iqtree-omp"):
+				elif is_tool("iqtree-omp"): #multicore version <= 1.5.X
 					program = "iqtree-omp"
 				elif os.path.isfile("./iqtree"):
 					program = "./iqtree"
@@ -520,41 +555,79 @@ for file in infilelist:
 					quit("PHYLOHANDLER: FATAL ERROR! iqtree not found")
 
 				#specify iqtree command
-				if args.no_guide:
-					if args.treeparams == "":
-						treecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta 1>final-{0}_iqtree.log".format(filename, args.maxcores) #GTR20 only for very large datasets
+				if find_iqtree_version() == "1":
+					if args.no_guide:
+						if args.treeparams == "":
+							treecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta".format(filename, args.maxcores) #GTR20 only for very large datasets
+						else:
+							treecommand = "-nt AUTO -ntmax {1} -s trimfilt-{0}.fasta {2}".format(filename, args.maxcores, treeparams)
 					else:
-						treecommand = "-nt AUTO -ntmax {1} -s trimfilt-{0}.fasta 1>final-{0}_iqtree.log {2}".format(filename, args.maxcores, treeparams)
-				else:
-					if args.treeparams == "":
-						guidetreecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -pre guide-{0} 1>guide-{0}_iqtree.log".format(filename, args.maxcores) #GTR20 only for very large datasets
-						treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile 1>final-{0}_iqtree.log".format(filename, args.maxcores) #GTR20 only for very large datasets
+						if args.treeparams == "":
+							guidetreecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -pre guide-{0}".format(filename, args.maxcores) #GTR20 only for very large datasets
+							treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile".format(filename, args.maxcores) #GTR20 only for very large datasets
+						else:
+							guidetreecommand = "-nt AUTO -ntmax {1} {2} -s trimfilt-{0}.fasta -pre guide-{0}".format(filename, args.maxcores, treeparams) #GTR20 only for very large datasets
+							#main tree is always PMSF, unless guide tree is turned off!
+							treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile".format(filename, args.maxcores, treeparams) #GTR20 only for very large datasets						
+					if args.ufbootstrap:
+						treecommand += " -bb 1000"
+					elif args.bootstrap: #will not calculate bootstrap if UFBoot requested
+						treecommand += " -b 1000"
+					if args.shalrt:
+						treecommand += " -alrt 1000"
+				#some parameters got renamed from version 2.0!
+				elif find_iqtree_version() == "2":
+					if args.no_guide:
+						if args.treeparams == "":
+							treecommand = "-m LG+F+G -T AUTO -ntmax {1} -s trimfilt-{0}.fasta".format(filename, args.maxcores) #GTR20 only for very large datasets
+						else:
+							treecommand = "-T AUTO -ntmax {1} -s trimfilt-{0}.fasta {2}".format(filename, args.maxcores, treeparams)
 					else:
-						guidetreecommand = "-m LG+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -pre guide-{0} 1>guide-{0}_iqtree.log {2}".format(filename, args.maxcores, treeparams) #GTR20 only for very large datasets
-						treecommand = "-m LG+C20+F+G -nt AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile 1>final-{0}_iqtree.log {2}".format(filename, args.maxcores, treeparams) #GTR20 only for very large datasets						
-				if args.ufbootstrap:
-					treecommand += " -bb 1000"
-				elif args.bootstrap: #will not calculate bootstrap if UFBoot requested
-					treecommand += " -b 1000"
-				if args.shalrt:
-					treecommand += " -alrt 1000"
+						if args.treeparams == "":
+							guidetreecommand = "-m LG+F+G -T AUTO -ntmax {1} -s trimfilt-{0}.fasta -pre guide-{0}".format(filename, args.maxcores) #GTR20 only for very large datasets
+							treecommand = "-m LG+C20+F+G -T AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile".format(filename, args.maxcores) #GTR20 only for very large datasets
+						else:
+							guidetreecommand = "-T AUTO -ntmax {1} {2} -s trimfilt-{0}.fasta -pre guide-{0}".format(filename, args.maxcores, treeparams) #GTR20 only for very large datasets
+							#main tree is always PMSF, unless guide tree is turned off!
+							treecommand = "-m LG+C20+F+G -T AUTO -ntmax {1} -s trimfilt-{0}.fasta -ft guide-{0}.treefile".format(filename, args.maxcores, treeparams) #GTR20 only for very large datasets						
+					if args.ufbootstrap:
+						treecommand += " -B 1000"
+					elif args.bootstrap: #will not calculate bootstrap if UFBoot requested
+						treecommand += " -b 1000"
+					if args.shalrt:
+						treecommand += " -alrt 1000"
 
 				#start inference
 				if args.no_guide:
 					pass
 				elif not os.path.isfile("guide-{0}.treefile".format(filename)):
+					guidetreecommand += " 1>guide-{0}_iqtree.log".format(filename)
 					print("PHYLOHANDLER: Issuing software for guide tree inference:\n{} {}".format(program, guidetreecommand))
 					os.system("{} {}".format(program, guidetreecommand))
 				else:
 					print("PHYLOHANDLER: Guide tree found, continuing...")
+				treecommand += " 1>final-{0}_iqtree.log".format(filename)
 				print("PHYLOHANDLER: Issuing software for final tree inference:\n{} {}".format(program, treecommand))
 				os.system("{} {}".format(program, treecommand))
+
 		else:
 			errors = True
 			error.write("file:{}\tcould not find assign software for tree inference\n".format(file))
 			print("PHYLOHANDLER: ERROR assigning software for tree inference!")
-	bestmodel = "LG+F+G" #find using 'grep "Best-fit model:" final-{0}_iqtree.log'.format(filename)
-	print("PHYLOHANDLER:", bestmodel)
+	if args.treeparams == "" or "-m " not in args.treeparams:
+		if args.no_guide:
+			model = "LG+F+G"
+		else:
+			model = "LG>PMSF"
+	elif "-m " in arg.treeparams:
+		if args.no_guide:
+			model = find_iqtree_model("final-{0}_iqtree.log".format(filename))
+		else:
+			model = find_iqtree_model("guide-{0}_iqtree.log".format(filename))
+			model += ">PMSF"
+	else: 
+		model = "N/D" #this should not happen
+	print("PHYLOHANDLER:", model)
 	print("PHYLOHANDLER: Tree inference finished, post-processing result files...")
 	#rename branches for presentation purposes:
 	try:
@@ -593,7 +666,8 @@ for file in infilelist:
 	except FileNotFoundError:
 		#could not open tree file, but other files can be cleaned
 		errors = True
-		error.write("file:{}\tcould not find treefile\n".format(file))
+		with open("error.log", "a") as error:
+			error.write("file:{}\tcould not find treefile\n".format(file))
 		failedfiles.append(file)
 		print("PHYLOHANDLER: ERROR! Treefile not found! Skipping to next.")
 
@@ -602,10 +676,12 @@ for file in infilelist:
 	os.rename("trimfilt-{}.phy".format(filename), "RESULT/{}{}-ali.phy".format(filename, generation))
 	#os.rename("{}".format(file), "RESULT/{}{}.{}".format(filename, generation, extension))
 	os.rename("rename-{}.txt".format(filename), "RESULT/{}{}-renamekey.tsv".format(filename, generation))
-	os.system("mv {}_mafft.log temp".format(filename))
 	os.system("mv *{}_iqtree.log temp".format(filename))
-	os.system("mv guide-{}* temp".format(filename))
-	os.system("mv safe-{}* temp".format(filename))
+	if not args.aligner == "-":
+		os.system("mv {}_mafft.log temp".format(filename))
+		os.system("mv safe-{}* temp".format(filename))
+	if not args.no_guide:
+		os.system("mv guide-{}* temp".format(filename))
 	os.system("mv trim*{}* temp".format(filename))
 	#os.system("mv trim* temp")
 	#os.system("mv guide* temp")
