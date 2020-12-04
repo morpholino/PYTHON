@@ -4,6 +4,7 @@ import urllib
 from Bio import Entrez,SeqIO
 
 Entrez.email = "zoltan.fussy@google.com" 
+#Entrez.api_key = ''
 
 #this script was designed to extract accessions from a table... 
 #see homedir/genomes/chromera/plastid proteome/ribosomals_list.txt
