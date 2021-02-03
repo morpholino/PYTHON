@@ -104,7 +104,7 @@ taxarepl9 = {"actiCORYd": "Corynebacter diphteriae", "actiMYCOt": "Mycobacterium
 "eugLEPTp": "Leptomonas pyrrhocoris", "eugLEPTs": "Leptomonas seymouri",
 "eugNEOBd": "Neobodo designis", "eugPARco": "Paratrypanosoma confusum", "eugPHYTO": "Phytomonas sp em1", 
 "eugTRYPb": "Trypanosoma brucei", 
-"excADUpa": "Aduncisulcus paluster Carplike_NY0171", "excBLATn": "Blattamonas nauphoetae", "excCARPm": "Carpediemonas membranifera", 
+"excADUpa": "Aduncisulcus paluster", "excBLATn": "Blattamonas nauphoetae", "excCARPm": "Carpediemonas membranifera", 
 "excCHIca": "Chilomastix caulleri", "excCHIcu": "Chilomastix cuspidata", "excDYSNb": "Dysnectes brevis", 
 "excERGcy": "Ergobibamus cyprinoides", "excGIARi": "Giardia intestinalis P15", "excHISTm": "Histomonas meleagridis", 
 "excIOTAs": "Iotanema sp.", "excKIPFb": "Kipferlia bialata", "excMONOe": "Monocercomonoides exilis", "excNAEgr": "Naegleria gruberi", 

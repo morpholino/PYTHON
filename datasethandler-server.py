@@ -614,17 +614,17 @@ for file in infilelist:
 			errors = True
 			error.write("file:{}\tcould not find assign software for tree inference\n".format(file))
 			print("PHYLOHANDLER: ERROR assigning software for tree inference!")
-	if args.treeparams == "" or "-m " not in args.treeparams:
-		if args.no_guide:
-			model = "LG+F+G"
-		else:
-			model = "LG>PMSF"
-	elif "-m " in arg.treeparams:
+	if "-m " in args.treeparams:
 		if args.no_guide:
 			model = find_iqtree_model("final-{0}_iqtree.log".format(filename))
 		else:
 			model = find_iqtree_model("guide-{0}_iqtree.log".format(filename))
 			model += ">PMSF"
+	elif args.treeparams == "":
+		if args.no_guide:
+			model = "LG+F+G"
+		else:
+			model = "LG>PMSF"
 	else: 
 		model = "N/D" #this should not happen
 	print("PHYLOHANDLER:", model)
