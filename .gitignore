@@ -7,6 +7,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+*/.DS_Store
 .Python
 build/
 develop-eggs/
@@ -113,6 +114,7 @@ venv.bak/
 abstracts*.txt
 gitignore.txt
 pandas_NOTEBOOK.ipynb
+interproscan/PANTHER16.0_HMM_classifications.gz
 *.fasta
 *.fastq
 */*.fasta
