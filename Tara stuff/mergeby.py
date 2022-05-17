@@ -36,7 +36,7 @@ def mergeby(file, outfile, by="all"):
 			unknown = [x for x in by if x not in ("all", "station", "filter", "layer")]
 			print("! unrecognized merging option omitted: {}".format(unknown))
 
-
+	"""
 	codes = {'CCKK': '0.22-3µm', 
 			 'CCII': '0.2-1.6µm', 
 			 'GGMM': '0.8-5µm', 
@@ -47,7 +47,7 @@ def mergeby(file, outfile, by="all"):
 			 'QQRR': '20-200µm',
 			 'SSUU': '180-2000µm', 
 			 }
-
+	"""
 	merged = {}
 
 	if file.endswith("gz"):
