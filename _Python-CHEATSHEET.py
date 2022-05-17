@@ -428,6 +428,23 @@ from ete3 import NCBITaxa
 ncbi = NCBITaxa()
 Entrez.email = 'zoltan.fussy@gmail.com'
 
+import pathlib
+def real_file_generator(suffix, directory):
+	#os.listdir() and os.walk() return a list -> take long to run
+	p = pathlib.Path(directory)
+	#yield p
+	for sub in p.iterdir():
+		if sub.is_dir():
+			#to iterate through subdirs:
+			#yield from real_file_generator(sub)
+			continue
+		elif sub.name.endswith(suffix):
+			yield sub
+		else:
+			continue
+files = real_file_generator("fa", "MultipleSequenceAlignments")
+
+
 def force_taxid(accession):
 	print("WARNING: missing taxid in input file taxified.x.out, requesting from NCBI server")
 	prot = Entrez.efetch(db='protein', id=accession, rettype='gb', retmode='text')
