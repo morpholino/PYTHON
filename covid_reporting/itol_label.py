@@ -1,6 +1,29 @@
 import argparse, textwrap
 from Bio import SeqIO
 from ete3 import Tree
+try:
+	import cssutils
+	import_css = True
+except ImportError:
+	import_css = False
+from pprint import pprint
+
+
+def import_css_colors(file="covid.css"):
+	with open(file, "rt") as f:
+		sheet = cssutils.parseString(f.read())
+	
+	dict = {}
+	for rule in sheet:
+		selector = rule.selectorText
+		style = rule.style.color
+		#to cycle through various properties:
+		#for property in rule.style:
+		#	style = property.value #property.name == color
+		dict[selector.replace("-", ".")] = style
+
+	pprint(dict)
+	return dict
 
 
 def adjust_lightness(color, amount=0.5):
@@ -12,7 +35,9 @@ def adjust_lightness(color, amount=0.5):
 	except:
 		c = color
 	c = colorsys.rgb_to_hls(*mc.to_rgb(c))
-	return colorsys.hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
+	rgb = colorsys.hls_to_rgb(c[0], max(0, min(1, amount * c[1])), c[2])
+	rgbhex = "#" + "".join("%02X" % round(i*255) for i in rgb)
+	return rgbhex
 
 
 def leaf_nodes(infile, infasta):
@@ -111,81 +136,97 @@ def clades(lineage_d, infile):
 
 def main():
 	global color_map_nodes
-	color_map_nodes = {
-					"B.1": "#A6CEE3",
-					"P.1": "#A6CEE3",
-					"P.2": "#A6CEE3",
-					"AY.1": "#9053D1",
-					"AY.10": "#9053D1",
-					"AY.11": "#9053D1",
-					"AY.12": "#9053D1",
-					"AY.113": "#924FDA",
-					"AY.121": "#D4FB79",
-					"AY.122": "#D4FB79",
-					"AY.125": "#D4FB79",
-					"AY.126": "#D4FB79",
-					"AY.127": "#D4FB79",
-					"AY.16": "#502E75",
-					"AY.17": "#9053D1",
-					"AY.18": "#9053D1",
-					"AY.19": "#9053D1",
-					"AY.2": "#9053D1",
-					"AY.20.1": "#D4FB79",
-					"AY.20": "#9053D1",
-					"AY.21": "#9053D1",
-					"AY.23": "#9053D1",
-					"AY.26": "#4D4D4D",
-					"AY.3": "#9053D1",
-					"AY.33": "#502E75",
-					"AY.34": "#787878",
-					"AY.36": "#787878",
-					"AY.38": "#9053D1",
-					"AY.4.1": "#33A02C",
-					"AY.4.2": "#33A02C",
-					"AY.4.3": "#33A02C",
-					"AY.4.4": "#33A02C",
-					"AY.4.5": "#33A02C",
-					"AY.4": "#33A02C",
-					"AY.41": "#9053D1",
-					"AY.42": "#D4FB79",
-					"AY.43": "#B2DF8A",
-					"AY.46.2": "#9053D1",
-					"AY.46.6": "#9053D1",
-					"AY.46": "#9053D1",
-					"AY.5.2": "#9053D1",
-					"AY.5": "#9053D1",
-					"AY.6": "#9053D1",
-					"AY.7.1": "#9053D1",
-					"AY.7.2": "#9053D1",
-					"AY.7": "#9053D1",
-					"AY.8": "#9053D1",
-					"AY.9": "#FF2F92",
-					"AY.9.2": "#FF2F92",
-					"AY.98.1": "#D4FB79",
-					"AY.98": "#D4FB79",
-					"AZ.2": "#338CC8",
-					"B.1.1.153": "#B15928",
-					"B.1.1.318": "#1F78B4",
-					"B.1.1.7": "#F3444B",
-					"B.1.1": "#FFFF99",
-					"B.1.160": "#FDBF6F",
-					"B.1.177": "#FB9A99",
-					"B.1.258.3": "#999999",
-					"B.1.258": "#999999",
-					"B.1.351.2": "#FF7F00",
-					"B.1.351": "#FF7F00",
-					"B.1.525": "#C65911",
-					"B.1.617.2": "#CAB2D6",
-					"C.36.3": "#DDD100",
-					"C.36": "#ABA200",
-					"None": "#BBBBBB",
-					"Other": "#999999",
-					"BA.1": "#FF5DBC",
-					"BA.2": "#C90076"
-					}
+	if import_css:
+		color_map_nodes = import_css_colors("covid.css")
+	else:
+		color_map_nodes = {
+					'AY.1': '#9053D1',
+					'AY.10': '#9053D1',
+					'AY.11': '#9053D1',
+					'AY.113': '#924FDA',
+					'AY.12': '#9053D1',
+					'AY.121': '#99c92b',
+					'AY.122': '#99c92b',
+					'AY.125': '#D4FB79',
+					'AY.126': '#ace42b',
+					'AY.127': '#D4FB79',
+					'AY.16': '#502E75',
+					'AY.17': '#9053D1',
+					'AY.18': '#9053D1',
+					'AY.19': '#9053D1',
+					'AY.2': '#9053D1',
+					'AY.20': '#9053D1',
+					'AY.20.1': '#D4FB79',
+					'AY.21': '#9053D1',
+					'AY.23': '#9053D1',
+					'AY.26': '#4D4D4D',
+					'AY.3': '#9053D1',
+					'AY.33': '#502E75',
+					'AY.34': '#787878',
+					'AY.36': '#787878',
+					'AY.38': '#9053D1',
+					'AY.4': '#33A02C',
+					'AY.4.1': '#33A02C',
+					'AY.4.2': '#33A02C',
+					'AY.4.3': '#33A02C',
+					'AY.4.4': '#33A02C',
+					'AY.4.5': '#33A02C',
+					'AY.41': '#9053D1',
+					'AY.42': '#D4FB79',
+					'AY.43': '#2bb655',
+					'AY.46': '#9053D1',
+					'AY.46.2': '#9053D1',
+					'AY.46.6': '#9053D1',
+					'AY.5': '#9053D1',
+					'AY.5.2': '#9053D1',
+					'AY.6': '#9053D1',
+					'AY.7': '#9053D1',
+					'AY.7.1': '#9053D1',
+					'AY.7.2': '#9053D1',
+					'AY.8': '#9053D1',
+					'AY.9': '#FF2F92',
+					'AY.9.2': '#FF2F92',
+					'AY.98': '#D4FB79',
+					'AY.98.1': '#D4FB79',
+					'AZ.2': '#338CC8',
+					'B.1': '#A6CEE3',
+					'B.1.1': '#FF9',
+					'B.1.1.153': '#B15928',
+					'B.1.1.318': '#1F78B4',
+					'B.1.1.7': '#F3444B',
+					'B.1.160': '#FDBF6F',
+					'B.1.177': '#FB9A99',
+					'B.1.258': '#999',
+					'B.1.258.3': '#999',
+					'B.1.351': '#FF7F00',
+					'B.1.351.2': '#FF7F00',
+					'B.1.525': '#C65911',
+					'B.1.617.2': '#CAB2D6',
+					'BA.1': '#f859b6',
+					'BA.2': '#C90076',
+					'BA.1.1': '#F792CD',
+					'BA.1.1.1': '#F792CD',
+					'BA.1.1.15': '#FDBF6F',
+					'BA.1.14': '#f859b6',
+					'BA.1.15': '#DE7DB6',
+					'BA.1.17': '#338CC8',
+					'BA.1.18': '#D4FB79',
+					'BA.2.3': '#9053D1',
+					'BA.2.9': '#9053D1',
+					'C.36': '#ABA200',
+					'C.36.3': '#DDD100',
+					'None': '#BBB',
+					'Other': '#999',
+					'P.1': '#A6CEE3',
+					'P.2': '#A6CEE3'}
 
 	global color_map_ranges
-	color_map_ranges = {
+	if import_css:
+		#fix! returns values as RGB not hex
+		color_map_ranges = {key: adjust_lightness(value, 0.5) 
+							for key, value in color_map_nodes.items()}
+	else:
+		color_map_ranges = {
 					#"B.1": "#D9EDF8",
 					"B.1.1": "#D9EDF8",
 					"B.1.258": "#98D3FA",
@@ -226,8 +267,7 @@ def main():
 				}
 
 	global header_colors
-	header_colors = textwrap.dedent("""
-					TREE_COLORS
+	header_colors = textwrap.dedent("""TREE_COLORS
 					SEPARATOR TAB
 					DATA
 					#First 3 fields define the node, type and color
@@ -244,8 +284,7 @@ def main():
 					""")
 
 	global header_texts
-	header_texts = textwrap.dedent("""
-					DATASET_TEXT
+	header_texts = textwrap.dedent("""DATASET_TEXT
 					SEPARATOR TAB
 					DATASET_LABEL	viral clades
 					COLOR	#ff0000
