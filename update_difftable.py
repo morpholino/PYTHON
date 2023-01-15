@@ -4,7 +4,7 @@ import numpy as np
 from Bio import SeqIO,Entrez
 #http://etetoolkit.org/docs/2.3/tutorial/tutorial_ncbitaxonomy.html
 Entrez.email = 'zoltan.fussy@gmail.com'
-Entrez.api_key = "ed51bca6c73792ecc692af11ff762b72a008"
+Entrez.api_key = ""
 
 #ncbi.update_taxonomy_database()
 #known issues: 
