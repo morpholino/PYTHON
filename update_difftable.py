@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from Bio import SeqIO,Entrez
 #http://etetoolkit.org/docs/2.3/tutorial/tutorial_ncbitaxonomy.html
-Entrez.email = 'zoltan.fussy@gmail.com'
-Entrez.api_key = ""
+Entrez.email = ''
+Entrez.api_key = ''
 
 #ncbi.update_taxonomy_database()
 #known issues: 
@@ -154,20 +154,12 @@ def parse_sseqid(sseqid):
 ##############
 ###  MAIN  ###
 ##############
-#quit("Use only for files for which fastas are present in folder")
-#nepoustet
 filetype = "met-gtf.tsv"
 files = [x for x in os.listdir(".") if x.endswith(filetype)]
-#files = ["bella_tr.Trinity.taxified.out"]
-print(files)
+rint(files)
 
 blast_d = read_blast_results("blastn")
 #print(blast_d)
-
-#try accessions:
-#XM_019096574.1	> refseq nucl column 15
-#LOC109045000	> gene locus column 12
-#NC_031698.1	12720705	12720796	>chromosome coordinates columns 0,1,2
 
 for file in files:
 	print("\n\n======\nAnalyzing", file)
