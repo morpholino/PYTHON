@@ -246,6 +246,14 @@ np.savetxt('{}_maxdiffs.out'.format(prefix), nparray, fmt='%0.3f', delimiter='\t
 #to sort two lists in python:
 ascendingtotals, ascendingtaxa = (list(x) for x in zip(*sorted(zip(unsortedList, unsortedTaxa)))) #parameters as reverse=True cannot be applied for *sorted
 
+#sort dictionary on values
+genes_count = {x: genes.count(x) for x in set(genes)}
+sorted_keys = sorted(genes_count.items(), key=lambda x:x[1], reverse=True)
+
+
+#sort dict by values
+x = {k: v for k, v in sorted(x.items(), key=lambda item: item[1])}
+
 from Bio import SeqIO,AlignIO
 #handling Fasta inputs
 inFile = SeqIO.parse('input.txt', 'fasta')
@@ -415,6 +423,16 @@ def query_yes_no(question, default="yes"):
 #######################
 
 
+#extract introns:
+import gffutils
+import sys
+db = gffutils.create_db(sys.argv[1], ':memory:', merge_strategy='create_unique')
+introns_exon = db.create_introns('exon')
+with open('introns.gff3', 'w') as f:
+	for intron in introns_exon:
+		f.write(str(intron)+ '\n')
+
+
 #read only the first lines, without use of the counter
 def read_ten(file_like_object):
     for line_number in range(10):
@@ -494,18 +512,29 @@ def overlaps(moduleA, moduleB):
 	endA = moduleA[1]
 	startB = moduleB[0]
 	endB = moduleB[1]
-	if startA <= startB <= endA:
-		if startA <= endB <= endA:
-			overlap = "embed"
-		else:
-			overlap = "overlap"
+	#must check both embeddings first!
+	if startA <= startB and endB <= endA:
+		overlap = "embed"
+		#length = endB - startB + 1
+	elif startB <= startA and endA <= endB:
+		overlap = "embed"
+		#length = endA - startA + 1
+	elif startA <= startB <= endA:
+		overlap = "overlap"
+		#length = endA - startB + 1
 	elif startA <= endB <= endA:
 		overlap = "overlap"
-	elif startB <= startA <= endB and startB <= endA <= endB:
-		overlap = "embed"
+		#length = endB - startA + 1
+	elif startB <= startA <= endB:
+		overlap = "overlap"
+		#length = endB - startA + 1
+	elif startB <= endA <= endB:
+		overlap = "overlap"
+		#length = endA - startB + 1
 	else:
 		overlap = "none"
-	return overlap
+		#length = 0
+	return overlap#, length
 
 def overlaps(moduleA, moduleB):
 	startA = moduleA[0]
